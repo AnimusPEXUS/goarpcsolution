@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/AnimusPEXUS/goinmemfile v0.0.0-20230402102658-16fda24ef49a
 	github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230402102828-3c4957046df3
-	github.com/AnimusPEXUS/utils v0.0.0-20230419181946-76378089b494
+	github.com/AnimusPEXUS/utils v0.0.0-20230419193547-d74bdd0d75d9
 	github.com/satori/go.uuid v1.2.0
 )
 
