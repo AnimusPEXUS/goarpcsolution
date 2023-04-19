@@ -38,7 +38,7 @@ type ARPCSolutionCtlI interface {
 		reply_err, err error,
 	)
 
-	CallClose(call_id uuid.UUID)
+	CallClose(call_id uuid.UUID) (reply_err, err error)
 
 	// ----------------------------------------
 	// Buffers
