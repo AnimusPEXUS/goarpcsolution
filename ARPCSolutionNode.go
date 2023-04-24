@@ -12,6 +12,8 @@ import (
 
 var _ ARPCSolutionCtlI = &ARPCSolutionNode{}
 
+// some functions inherited from ARPCSolutionCtlI.
+// respective function documentation - placed into interface
 type ARPCSolutionNode struct {
 	PushMessageToOutsideCB func(data []byte) error
 
@@ -182,8 +184,9 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 	} else {
 		var (
 			// err_proto error
-			result    any
-			err_code  int
+			result any
+			// todo: do something with err_code
+			// err_code  int
 			err_reply error
 			err_ret   error
 		)
@@ -271,14 +274,46 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			result = "ok"
 
 		case "BufferGetInfo":
+			buffer_id_str, _, err := anyutils.TraverseObjectTree002_string(
+				msg_par,
+				true,
+				false,
+				"buffer_id_str",
+			)
+
+			err_ret = err
+
+			if err_ret != nil {
+				goto return_result2
+			}
+
+			result, err_reply, err_ret = self.controller.BufferGetInfo(
+				uuid.FromStringOrNil(buffer_id_str),
+			)
+
 		case "BufferGetItemsFirstTime":
+			buffer_id_str, _, err := anyutils.TraverseObjectTree002_string(
+				msg_par,
+				true,
+				false,
+				"buffer_id_str",
+			)
+
+			err_ret = err
+
+			if err_ret != nil {
+				goto return_result2
+			}
+
+			result, err_reply, err_ret = self.controller.BufferGetItemsFirstTime(
+				uuid.FromStringOrNil(buffer_id_str),
+			)
+
 		case "BufferGetItemsLastTime":
 		case "BufferGetItemsByIds":
 		case "BufferGetItemsStartingFromId":
-		case "BufferGetItemsByFirstAndLastId":
-		case "BufferGetItemsByFirstAndBeforeId":
-		case "BufferGetItemsByFirstAndLastTime":
-		case "BufferGetItemsByFirstAndBeforeTime":
+		case "BufferGetItemsFromFirstTillLastId":
+		case "BufferGetItemIdsFromFirstTillLastTime":
 		case "BufferSubscribeOnUpdatesIndicator":
 		case "BroadcastGetIdList":
 		case "BroadcastGetInfo":
@@ -323,14 +358,14 @@ func (self *ARPCSolutionNode) methodReplyAction(
 	err error,
 ) error {
 	msg := new(gojsonrpc2.Message)
+	msg.SetId(msg_id)
 
 	if err != nil {
 		e := &gojsonrpc2.JSONRPC2Error{
-			Code:    err_code,
-			Message: err_reply.Error(),
+			Code:    int(gojsonrpc2.ProtocolErrorInternalError),
+			Message: "internal server error",
 		}
 		msg.Error = e
-		msg.SetId(msg_id)
 		// note: intentionaly ignoring error from SendError()
 		self.jrpc_node.SendError(msg)
 
@@ -343,11 +378,14 @@ func (self *ARPCSolutionNode) methodReplyAction(
 			Message: err_reply.Error(),
 		}
 		msg.Error = e
-		msg.SetId(msg_id)
 		return self.jrpc_node.SendError(msg)
 	}
 
 	msg.Result = result
+	err = self.jrpc_node.SendResponse(msg)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
