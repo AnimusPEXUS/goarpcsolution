@@ -1,6 +1,7 @@
 package goarpcsolution
 
 import (
+	"net"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -9,7 +10,7 @@ import (
 // about UUID is:
 //
 // it is adviced to keep in mind, what UUIDs of
-// Calls, Buffers, Transmissions, available and connected ports
+// Calls, Buffers, Transmissions, available and connected sockets
 // does not share space and resources can have identicall UUID, thou
 // belonging to different things.
 //
@@ -18,11 +19,11 @@ import (
 // 1. Calls
 // 2. Buffers
 // 3. Transmissions
-// 4. Available Ports
-// 5. Connected ports
+// 4. Available Sockets
+// 5. Connected sockets
 //
-// so if You got, say, 'aaaa' UUID indicating an Available Port,
-// this doesn't mean 'you can't get same aaaa UUID for opened port'
+// so if You got, say, 'aaaa' UUID indicating an Available Socket,
+// this doesn't mean 'you can't get same aaaa UUID for opened socket'
 
 type ARPCSolutionCtlI interface {
 
@@ -41,14 +42,20 @@ type ARPCSolutionCtlI interface {
 		buffer_id uuid.UUID,
 	)
 
+	// you have to subscribe to bufffer updates to receive this
+	// notifications (see BufferSubscribeOnUpdatesNotification())
+	BufferUpdated(
+		buffer_id uuid.UUID,
+	)
+
 	// inform node about new transmission availability
 	NewTransmission(
 		tarnsmission_id uuid.UUID,
 	)
 
-	// inform node about new port availability
-	NewPort(
-		port_id uuid.UUID,
+	// inform node about new socket availability
+	NewSocket(
+		socket_id uuid.UUID,
 	)
 
 	// ----------------------------------------
@@ -58,7 +65,7 @@ type ARPCSolutionCtlI interface {
 	// generates list of active calls and returns it's buffer_id
 	CallGetList() (
 		buffer_id uuid.UUID,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// returns int count of attributes of call
@@ -66,23 +73,23 @@ type ARPCSolutionCtlI interface {
 		call_id uuid.UUID,
 	) (
 		res int,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// returns ARPCArgInfo for selected arg of selected call
-	CallGetArgInfo(
+	CallGetArgValue(
 		call_id uuid.UUID,
 		index int,
 	) (
 		info *ARPCArgInfo,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// inform node what call isn't longer needed
 	CallClose(
 		call_id uuid.UUID,
 	) (
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// ----------------------------------------
@@ -94,7 +101,7 @@ type ARPCSolutionCtlI interface {
 		buffer_id uuid.UUID,
 	) (
 		info *ARPCBufferInfo,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// get count of items in buffer.
@@ -104,17 +111,18 @@ type ARPCSolutionCtlI interface {
 		buffer_id uuid.UUID,
 	) (
 		count int,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// get exact ids of buffer items using Buffer Item Specifiers
 	BufferGetItemsIds(
 		buffer_id uuid.UUID,
 		first_spec, last_spec *ARPCBufferItemSpecifier,
-		include_last bool,
+		// TODO: do we need include_last?
+		// include_last bool,
 	) (
 		ids []string,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// returns Times of specified buffer items
@@ -123,7 +131,7 @@ type ARPCSolutionCtlI interface {
 		ids []string,
 	) (
 		times []time.Time,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// retrive actual buffer items with payloads
@@ -132,7 +140,7 @@ type ARPCSolutionCtlI interface {
 		ids []string,
 	) (
 		buffer_items []*ARPCBufferItem,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// next two functions to enchance transmission updates rereival
@@ -141,27 +149,39 @@ type ARPCSolutionCtlI interface {
 		buffer_id uuid.UUID,
 	) (
 		time time.Time,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	BufferGetItemsLastTime(
 		buffer_id uuid.UUID,
 	) (
 		time time.Time,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// receive notifications on buffer updates
 	BufferSubscribeOnUpdatesNotification(
 		buffer_id uuid.UUID,
 	) (
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	BufferUnsubscribeFromUpdatesNotification(
 		buffer_id uuid.UUID,
 	) (
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
+	)
+
+	BufferGetIsSubscribedOnUpdatesNotification(
+		buffer_id uuid.UUID,
+	) (
+		bool,
+		err_processing_not_internal, err_processing_internal error,
+	)
+
+	BufferGetListSubscribedUpdatesNotifications() (
+		buffer_id uuid.UUID,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// ---v--- BufferBinary ---v---
@@ -172,15 +192,15 @@ type ARPCSolutionCtlI interface {
 		buffer_id uuid.UUID,
 	) (
 		size int,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	BufferBinaryGetSlice(
 		buffer_id uuid.UUID,
-		start, end int,
+		start_index, end_index int,
 	) (
 		data []byte,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// ---^--- BufferBinary ---^---
@@ -193,49 +213,80 @@ type ARPCSolutionCtlI interface {
 	// result is buffer with ids.
 	TransmissionGetList() (
 		buffer_id uuid.UUID,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	TransmissionGetInfo(
-		broadcast_id uuid.UUID,
+		transmission_id uuid.UUID,
 	) (
 		info *ARPCTransmissionInfo,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
 	// ----------------------------------------
-	// Ports
+	// Sockets
 	// ----------------------------------------
+
+	// note: socket here - mimics Go's net.Conn interface
 
 	// just like the CallGetList() or TransmissionGetList(),
-	// same here but for ports:
+	// same here but for sockets:
 	// result is buffer with ids.
-	// except: only ports available to be opened are listed -
-	// already connected ports - are not returned
-	PortGetList() (
+	// except: only sockets available to be opened are listed -
+	// already connected sockets - are not returned
+	SocketGetList() (
 		buffer_id uuid.UUID,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
-	PortOpen(listening_port_id uuid.UUID) (
-		connected_port_id uuid.UUID,
-		reply_err, err error,
+	SocketOpen(listening_socket_id uuid.UUID) (
+		connected_socket_id uuid.UUID,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
-	// TODO: not sure we need explicit PortRead() function.
-	// maybe it should be assumed 'write' to the buffer whould be it's
-	// 'read' from the other side
-	PortRead(connected_port_id uuid.UUID, b []byte) (
+	SocketRead(
+		connected_socket_id uuid.UUID,
+		try_read_size int,
+	) (
+		b []byte,
+		err_processing_not_internal, err_processing_internal error,
+	)
+
+	SocketWrite(
+		connected_socket_id uuid.UUID,
+		b []byte,
+	) (
 		n int,
-		reply_err, err error,
+		err_processing_not_internal, err_processing_internal error,
 	)
 
-	PortWrite(connected_port_id uuid.UUID, b []byte) (
-		n int,
-		reply_err, err error,
+	SocketClose(
+		connected_socket_id uuid.UUID,
+	) (
+		err_processing_not_internal, err_processing_internal error,
 	)
 
-	PortClose(connected_port_id uuid.UUID) (
-		reply_err, err error,
+	SocketSetDeadline(
+		connected_socket_id uuid.UUID,
+		t time.Time,
+	) (
+		err_processing_not_internal, err_processing_internal error,
 	)
+
+	SocketSetReadDeadline(
+		connected_socket_id uuid.UUID,
+		t time.Time,
+	) (
+		err_processing_not_internal, err_processing_internal error,
+	)
+
+	SocketSetWriteDeadline(
+		connected_socket_id uuid.UUID,
+		t time.Time,
+	) (
+		err_processing_not_internal, err_processing_internal error,
+	)
+
+	// get local representation of remote connected socket
+	SocketGetConn(connected_socket_id uuid.UUID) (net.Conn, error)
 }

@@ -34,14 +34,6 @@ type ARPCBufferInfo struct {
 	TechDescription any
 }
 
-// if buffer mode is 'binary', ItemId must be of form 'x:y'
-// like in Go's slice syntax. so x - is index of this items's first byte in
-// corresponding buffer, and y is index of last byte in buffer.
-// value, in this case, must be []byte type
-//
-// in 'object mode' , ItemId should be simple integer, corresponding to
-// index of this item in buffer. value, in this case, can be any type, which
-// can be marshalled via Go's json module
 type ARPCBufferItem struct {
 	BufferId uuid.UUID
 	ItemId   string
@@ -79,11 +71,11 @@ type ARPCBufferItemSpecifier struct {
 
 func NewARPCBufferItemSpecifierFromString(
 	value string,
-) (*ARPCBufferItemSpecifier, bool) {
+) (*ARPCBufferItemSpecifier, ARPCBufferItemSpecifierType) {
 	self := new(ARPCBufferItemSpecifier)
 	self.Value = strings.TrimSpace(value)
 	t, _ := self.Type()
-	return self, t != ARPCBufferItemSpecifierTypeInvalid
+	return self, t
 }
 
 // var RE_UUID_Id = regexp.MustCompile(`^[0-9a-fA-F_\-]{32,}$`)
