@@ -1,7 +1,7 @@
 github.com/AnimusPEXUS/goinmemfile v0.0.0-20230402102658-16fda24ef49a h1:TExXN9KW90G5g17auIqHUERQQ/XYDFY/hYrPZpfC8wM=
 github.com/AnimusPEXUS/goinmemfile v0.0.0-20230402102658-16fda24ef49a/go.mod h1:1dwjt85DZhL+k0b3meVRsoyfWAhbKCh5gfuZoxU0Gr8=
-github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230419224628-b099e0ddf71e h1:VyReM6boshuMaqlA8iuIu/XTD6LT0Kgqpy7GTv+RF2Q=
-github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230419224628-b099e0ddf71e/go.mod h1:qz9lrAVfIQi8UjFt8JCfYqM5wi1cztR80a0nXK7E28g=
+github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230503045211-33c5a5a4e9dd h1:O4OnOoS/5S0IHnL2XWaSwzCGEvpvjJIyy8f58A6+Un8=
+github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230503045211-33c5a5a4e9dd/go.mod h1:qz9lrAVfIQi8UjFt8JCfYqM5wi1cztR80a0nXK7E28g=
 github.com/AnimusPEXUS/utils v0.0.0-20230429235807-5de56d5918ef h1:fXfsWxV4Fgt+NRf5km1bPcBvJVG57edx72QUF7VINq8=
 github.com/AnimusPEXUS/utils v0.0.0-20230429235807-5de56d5918ef/go.mod h1:qEzA426LPDVc5bFqhazSQ8Q3iJP/04/h+VZzbY9BewQ=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
