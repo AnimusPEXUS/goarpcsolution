@@ -1471,12 +1471,12 @@ func (self *ARPCSolutionNode) NewTransmission(
 }
 
 func (self *ARPCSolutionNode) NewSocket(
-	socket_id uuid.UUID,
+	listening_socket_id uuid.UUID,
 ) error {
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "NewSocket"
 
-	msg.Params = map[string]any{"socket_id": socket_id.String()}
+	msg.Params = map[string]any{"listening_socket_id": listening_socket_id.String()}
 
 	return self.jrpc_node.SendNotification(msg)
 }

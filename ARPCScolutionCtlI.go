@@ -55,7 +55,7 @@ type ARPCSolutionCtlI interface {
 
 	// inform node about new socket availability
 	NewSocket(
-		socket_id uuid.UUID,
+		listening_socket_id uuid.UUID,
 	)
 
 	// ----------------------------------------
