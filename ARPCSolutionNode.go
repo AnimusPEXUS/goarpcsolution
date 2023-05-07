@@ -7,10 +7,11 @@ import (
 
 	"github.com/AnimusPEXUS/gojsonrpc2"
 	"github.com/AnimusPEXUS/utils/anyutils"
+	"github.com/mitchellh/mapstructure"
 	uuid "github.com/satori/go.uuid"
 )
 
-var _ ARPCSolutionCtlI = &ARPCSolutionNode{}
+// var _ ARPCSolutionCtlI = &ARPCSolutionNode{}
 
 // some functions inherited from ARPCSolutionCtlI.
 // respective function documentation - placed into interface
@@ -105,9 +106,8 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 	var (
 		// err_proto error
 		result any = nil
-		// todo: do something with err_code
-		// err_code  int
 
+		err_code int
 		// input error (protocol error) (this is notification. include into log only)
 		err_input error
 		// error (this is notification. include into log only)
@@ -120,6 +120,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 	switch msg.Method {
 	default:
+		err_code = int(gojsonrpc2.ProtocolErrorMethodNotFound)
 		err_input = errors.New("invalid method name")
 		err_processing_not_internal = errors.New("protocol error")
 		err_processing_internal = errors.New("protocol error")
@@ -143,6 +144,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		call_id_uuid := uuid.FromStringOrNil(call_id)
+		if uuid.Equal(uuid.Nil, call_id_uuid) {
+			err_input = errors.New("invalid call_id")
+			break
+		}
+
 		response_on, response_on_found, err :=
 			anyutils.TraverseObjectTree002_string(
 				msg_par,
@@ -156,17 +163,27 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		var response_on_uuid uuid.UUID
+		if response_on_found {
+			response_on_uuid = uuid.FromStringOrNil(response_on)
+			if uuid.Equal(uuid.Nil, response_on_uuid) {
+				err_input = errors.New("invalid response_on")
+				break
+			}
+		}
+
 		if !response_on_found {
 			go self.controller.NewCall(
-				uuid.FromStringOrNil(call_id),
+				call_id_uuid,
 				uuid.Nil,
 			)
 		} else {
 			go self.controller.NewCall(
-				uuid.FromStringOrNil(call_id),
-				uuid.FromStringOrNil(response_on),
+				call_id_uuid,
+				response_on_uuid,
 			)
 		}
+
 	case "NewBuffer":
 		buffer_id, not_found, err :=
 			anyutils.TraverseObjectTree002_string(
@@ -186,9 +203,16 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		self.controller.NewBuffer(
-			uuid.FromStringOrNil(buffer_id),
+			buffer_id_uuid,
 		)
+
 	case "BufferUpdated":
 		buffer_id, not_found, err :=
 			anyutils.TraverseObjectTree002_string(
@@ -208,9 +232,16 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		self.controller.BufferUpdated(
-			uuid.FromStringOrNil(buffer_id),
+			buffer_id_uuid,
 		)
+
 	case "NewTransmission":
 		tarnsmission_id, not_found, err :=
 			anyutils.TraverseObjectTree002_string(
@@ -230,9 +261,16 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		tarnsmission_id_uuid := uuid.FromStringOrNil(tarnsmission_id)
+		if uuid.Equal(uuid.Nil, tarnsmission_id_uuid) {
+			err_input = errors.New("invalid tarnsmission_id")
+			break
+		}
+
 		self.controller.NewTransmission(
-			uuid.FromStringOrNil(tarnsmission_id),
+			tarnsmission_id_uuid,
 		)
+
 	case "NewSocket":
 		port_id, not_found, err :=
 			anyutils.TraverseObjectTree002_string(
@@ -252,8 +290,14 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		port_id_uuid := uuid.FromStringOrNil(port_id)
+		if uuid.Equal(uuid.Nil, port_id_uuid) {
+			err_input = errors.New("invalid port_id")
+			break
+		}
+
 		self.controller.NewSocket(
-			uuid.FromStringOrNil(port_id),
+			port_id_uuid,
 		)
 
 	// ------------ Methods ------------
@@ -281,9 +325,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		call_id_uuid := uuid.FromStringOrNil(call_id)
+		if uuid.Equal(uuid.Nil, call_id_uuid) {
+			err_input = errors.New("invalid call_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.CallGetArgCount(
-				uuid.FromStringOrNil(call_id),
+				call_id_uuid,
 			)
 
 	case "CallGetArgValue":
@@ -301,6 +351,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		if err != nil {
 			err_processing_internal = err
+			break
+		}
+
+		call_id_uuid := uuid.FromStringOrNil(call_id)
+		if uuid.Equal(uuid.Nil, call_id_uuid) {
+			err_input = errors.New("invalid call_id")
 			break
 		}
 
@@ -328,7 +384,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.CallGetArgValue(
-				uuid.FromStringOrNil(call_id),
+				call_id_uuid,
 				arg_index,
 			)
 
@@ -351,8 +407,14 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		call_id_uuid := uuid.FromStringOrNil(call_id)
+		if uuid.Equal(uuid.Nil, call_id_uuid) {
+			err_input = errors.New("invalid call_id")
+			break
+		}
+
 		self.controller.CallClose(
-			uuid.FromStringOrNil(call_id),
+			call_id_uuid,
 		)
 
 	case "BufferGetInfo":
@@ -374,9 +436,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetInfo(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 	case "BufferGetItemsCount":
@@ -398,9 +466,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetItemsCount(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 	case "BufferGetItemsIds":
@@ -419,6 +493,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		if err != nil {
 			err_processing_internal = err
+			break
+		}
+
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
 			break
 		}
 
@@ -476,7 +556,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetItemsIds(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 				first_spec,
 				last_spec,
 			)
@@ -500,6 +580,61 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
+		ids, not_found, err :=
+			anyutils.TraverseObjectTree002_str_list(
+				msg_par,
+				true,
+				true,
+				"ids",
+			)
+
+		if not_found {
+			err_input = errors.New("not found required parameter ids")
+			break
+		}
+
+		if err != nil {
+			err_processing_internal = err
+			break
+		}
+
+		result, err_processing_not_internal, err_processing_internal =
+			self.controller.BufferGetItemsTimesByIds(
+				buffer_id_uuid,
+				ids,
+			)
+
+	case "BufferGetItemsByIds":
+		buffer_id, not_found, err :=
+			anyutils.TraverseObjectTree002_string(
+				msg_par,
+				true,
+				true,
+				"buffer_id",
+			)
+
+		if not_found {
+			err_input = errors.New("not found required parameter buffer_id")
+			break
+		}
+
+		if err != nil {
+			err_processing_internal = err
+			break
+		}
+
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		ids, not_found, err :=
 			anyutils.TraverseObjectTree002_str_list(
 				msg_par,
@@ -520,7 +655,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetItemsByIds(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 				ids,
 			)
 
@@ -543,9 +678,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetItemsFirstTime(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 	case "BufferGetItemsLastTime":
@@ -568,9 +709,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetItemsLastTime(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 	case "BufferSubscribeOnUpdatesNotification":
@@ -593,9 +740,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		err_processing_not_internal, err_processing_internal =
 			self.controller.BufferSubscribeOnUpdatesNotification(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 		result = err_processing_not_internal == nil &&
@@ -621,9 +774,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		err_processing_not_internal, err_processing_internal =
 			self.controller.BufferUnsubscribeFromUpdatesNotification(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 		result = err_processing_not_internal == nil &&
@@ -649,9 +808,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetIsSubscribedOnUpdatesNotification(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 	case "BufferGetListSubscribedUpdatesNotifications":
@@ -674,9 +839,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferGetIsSubscribedOnUpdatesNotification(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 	case "BufferBinaryGetSize":
@@ -699,9 +870,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferBinaryGetSize(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 			)
 
 	case "BufferBinaryGetSlice":
@@ -720,6 +897,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		if err != nil {
 			err_processing_internal = err
+			break
+		}
+
+		buffer_id_uuid := uuid.FromStringOrNil(buffer_id)
+		if uuid.Equal(uuid.Nil, buffer_id_uuid) {
+			err_input = errors.New("invalid buffer_id")
 			break
 		}
 
@@ -765,7 +948,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.BufferBinaryGetSlice(
-				uuid.FromStringOrNil(buffer_id),
+				buffer_id_uuid,
 				start_index,
 				end_index,
 			)
@@ -793,9 +976,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		transmission_id_uuid := uuid.FromStringOrNil(transmission_id)
+		if uuid.Equal(uuid.Nil, transmission_id_uuid) {
+			err_input = errors.New("invalid transmission_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.TransmissionGetInfo(
-				uuid.FromStringOrNil(transmission_id),
+				transmission_id_uuid,
 			)
 
 	case "SocketGetList":
@@ -821,9 +1010,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		listening_socket_id_uuid := uuid.FromStringOrNil(listening_socket_id)
+		if uuid.Equal(uuid.Nil, listening_socket_id_uuid) {
+			err_input = errors.New("invalid listening_socket_id")
+			break
+		}
+
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.SocketOpen(
-				uuid.FromStringOrNil(listening_socket_id),
+				listening_socket_id_uuid,
 			)
 
 	case "SocketRead":
@@ -842,6 +1037,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		if err != nil {
 			err_processing_internal = err
+			break
+		}
+
+		connected_socket_id_uuid := uuid.FromStringOrNil(connected_socket_id)
+		if uuid.Equal(uuid.Nil, connected_socket_id_uuid) {
+			err_input = errors.New("invalid connected_socket_id")
 			break
 		}
 
@@ -869,7 +1070,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.SocketRead(
-				uuid.FromStringOrNil(connected_socket_id),
+				connected_socket_id_uuid,
 				try_read_size,
 			)
 
@@ -893,6 +1094,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		connected_socket_id_uuid := uuid.FromStringOrNil(connected_socket_id)
+		if uuid.Equal(uuid.Nil, connected_socket_id_uuid) {
+			err_input = errors.New("invalid connected_socket_id")
+			break
+		}
+
 		b, not_found, err := anyutils.TraverseObjectTree002_byte_list(
 			msg_par,
 			true,
@@ -912,21 +1119,21 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		result, err_processing_not_internal, err_processing_internal =
 			self.controller.SocketWrite(
-				uuid.FromStringOrNil(connected_socket_id),
+				connected_socket_id_uuid,
 				b,
 			)
 
 	case "SocketClose":
-		listening_socket_id, not_found, err :=
+		connected_socket_id, not_found, err :=
 			anyutils.TraverseObjectTree002_string(
 				msg_par,
 				true,
 				true,
-				"listening_socket_id",
+				"connected_socket_id",
 			)
 
 		if not_found {
-			err_input = errors.New("not found required parameter listening_socket_id")
+			err_input = errors.New("not found required parameter connected_socket_id")
 			break
 		}
 
@@ -935,9 +1142,15 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 			break
 		}
 
+		connected_socket_id_uuid := uuid.FromStringOrNil(connected_socket_id)
+		if uuid.Equal(uuid.Nil, connected_socket_id_uuid) {
+			err_input = errors.New("invalid connected_socket_id")
+			break
+		}
+
 		err_processing_not_internal, err_processing_internal =
 			self.controller.SocketClose(
-				uuid.FromStringOrNil(listening_socket_id),
+				connected_socket_id_uuid,
 			)
 
 		result = err_processing_not_internal == nil &&
@@ -959,6 +1172,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		if err != nil {
 			err_processing_internal = err
+			break
+		}
+
+		connected_socket_id_uuid := uuid.FromStringOrNil(connected_socket_id)
+		if uuid.Equal(uuid.Nil, connected_socket_id_uuid) {
+			err_input = errors.New("invalid connected_socket_id")
 			break
 		}
 
@@ -988,12 +1207,13 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		err_processing_not_internal, err_processing_internal =
 			self.controller.SocketSetDeadline(
-				uuid.FromStringOrNil(connected_socket_id),
+				connected_socket_id_uuid,
 				t,
 			)
 
 		result = err_processing_not_internal == nil &&
 			err_processing_internal == nil
+
 	case "SocketSetReadDeadline":
 		connected_socket_id, not_found, err :=
 			anyutils.TraverseObjectTree002_string(
@@ -1010,6 +1230,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		if err != nil {
 			err_processing_internal = err
+			break
+		}
+
+		connected_socket_id_uuid := uuid.FromStringOrNil(connected_socket_id)
+		if uuid.Equal(uuid.Nil, connected_socket_id_uuid) {
+			err_input = errors.New("invalid connected_socket_id")
 			break
 		}
 
@@ -1039,12 +1265,13 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		err_processing_not_internal, err_processing_internal =
 			self.controller.SocketSetReadDeadline(
-				uuid.FromStringOrNil(connected_socket_id),
+				connected_socket_id_uuid,
 				t,
 			)
 
 		result = err_processing_not_internal == nil &&
 			err_processing_internal == nil
+
 	case "SocketSetWriteDeadline":
 		connected_socket_id, not_found, err :=
 			anyutils.TraverseObjectTree002_string(
@@ -1061,6 +1288,12 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		if err != nil {
 			err_processing_internal = err
+			break
+		}
+
+		connected_socket_id_uuid := uuid.FromStringOrNil(connected_socket_id)
+		if uuid.Equal(uuid.Nil, connected_socket_id_uuid) {
+			err_input = errors.New("invalid connected_socket_id")
 			break
 		}
 
@@ -1090,7 +1323,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 
 		err_processing_not_internal, err_processing_internal =
 			self.controller.SocketSetWriteDeadline(
-				uuid.FromStringOrNil(connected_socket_id),
+				connected_socket_id_uuid,
 				t,
 			)
 
@@ -1102,8 +1335,7 @@ func (self *ARPCSolutionNode) PushMessageFromOutside(
 		err_processing_internal = self.methodReplyAction(
 			msg_id,
 			result,
-			// todo: fix code
-			10,
+			err_code,
 			err_input,
 			err_processing_not_internal,
 			err_processing_internal,
@@ -1130,9 +1362,13 @@ func (self *ARPCSolutionNode) methodReplyAction(
 	msg := new(gojsonrpc2.Message)
 	msg.SetId(msg_id)
 
-	err_code = 10 // todo: find better value
+	// err_code = 10 // todo: find better value
 
 	var err error
+
+	if err_input != nil {
+
+	}
 
 	if err_processing_internal != nil {
 		e := &gojsonrpc2.JSONRPC2Error{
@@ -1158,6 +1394,18 @@ func (self *ARPCSolutionNode) methodReplyAction(
 		return self.jrpc_node.SendError(msg)
 	}
 
+	if err_input != nil {
+		if err_code != int(gojsonrpc2.ProtocolErrorMethodNotFound) {
+			err_code = int(gojsonrpc2.ProtocolErrorInvalidParams)
+		}
+		e := &gojsonrpc2.JSONRPC2Error{
+			Code:    err_code,
+			Message: err_input.Error(),
+		}
+		msg.Error = e
+		return self.jrpc_node.SendError(msg)
+	}
+
 	msg.Result = result
 	err = self.jrpc_node.SendResponse(msg)
 	if err != nil {
@@ -1174,111 +1422,1275 @@ func (self *ARPCSolutionNode) methodReplyAction(
 func (self *ARPCSolutionNode) NewCall(
 	call_id uuid.UUID,
 	response_on uuid.UUID,
-)
+) error {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "NewCall"
 
-func (self *ARPCSolutionNode) NewBuffer(id uuid.UUID)
+	params := map[string]any{"call_id": call_id}
 
-func (self *ARPCSolutionNode) NewBroadcast(id uuid.UUID)
+	if !uuid.Equal(response_on, uuid.Nil) {
+		params["response_on"] = response_on
+	}
 
-func (self *ARPCSolutionNode) NewSocket(id uuid.UUID)
+	msg.Params = params
+
+	return self.jrpc_node.SendNotification(msg)
+}
+
+func (self *ARPCSolutionNode) NewBuffer(
+	buffer_id uuid.UUID,
+) error {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "NewBuffer"
+
+	msg.Params = map[string]any{"buffer_id": buffer_id.String()}
+
+	return self.jrpc_node.SendNotification(msg)
+}
+
+func (self *ARPCSolutionNode) BufferUpdated(
+	buffer_id uuid.UUID,
+) error {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferUpdated"
+
+	msg.Params = map[string]any{"buffer_id": buffer_id.String()}
+
+	return self.jrpc_node.SendNotification(msg)
+}
+
+func (self *ARPCSolutionNode) NewTransmission(
+	tarnsmission_id uuid.UUID,
+) error {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "NewTransmission"
+
+	msg.Params = map[string]any{"tarnsmission_id": tarnsmission_id.String()}
+
+	return self.jrpc_node.SendNotification(msg)
+}
+
+func (self *ARPCSolutionNode) NewSocket(
+	socket_id uuid.UUID,
+) error {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "NewSocket"
+
+	msg.Params = map[string]any{"socket_id": socket_id.String()}
+
+	return self.jrpc_node.SendNotification(msg)
+}
 
 // ----------------------------------------
 // Basic Calls
 // ----------------------------------------
 
-func (self *ARPCSolutionNode) CallGetList() (buffer_id uuid.UUID, err error)
+func (self *ARPCSolutionNode) subResultGetter01(
+	timedout_sig <-chan struct{},
+	closed_sig <-chan struct{},
+	msg_sig <-chan *gojsonrpc2.Message,
+) (result any, timedout bool, closed bool,
+	result_err error, err error) {
 
-func (self *ARPCSolutionNode) CallGetArgCount(call_id uuid.UUID) (int, error)
+	select {
+	case <-timedout_sig:
+		return nil, true, false, nil, nil
+	case <-closed_sig:
+		return nil, false, true, nil, nil
+	case res_msg := <-msg_sig:
+		if res_msg.IsInvalid() {
+			return nil,
+				false, false, errors.New("invalid message"), errors.New("protocol error")
+		}
+		if !res_msg.HasResponseFields() {
+			return nil,
+				false, false, nil, errors.New("not a response")
+		}
+		if res_msg.IsError() {
+			return nil,
+				false, false, errors.New(res_msg.Error.Message), nil
+		}
 
-func (self *ARPCSolutionNode) CallGetArgValue(call_id uuid.UUID, index int) (
-	*ARPCArgInfo,
-	error,
-)
+		return res_msg.Result,
+			false, false, nil, errors.New("result must be uuid string")
 
-func (self *ARPCSolutionNode) CallClose(call_id uuid.UUID)
+	}
+	return nil,
+		false, false, nil, errors.New("unknown error")
+}
+
+func (self *ARPCSolutionNode) CallGetList(
+	response_timeout time.Duration,
+) (
+	buffer_id uuid.UUID,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallGetList"
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return uuid.Nil, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		buffer_id = uuid.Nil
+		return
+	}
+
+	result_str, ok := result_any.(string)
+	if !ok {
+		return uuid.Nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	result := uuid.FromStringOrNil(result_str)
+	if uuid.Equal(uuid.Nil, result) {
+		return uuid.Nil,
+			false, false, nil, errors.New("invalid uuid")
+	}
+
+	return result, false, false, nil, nil
+
+}
+
+func (self *ARPCSolutionNode) CallGetArgCount(
+	call_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	res int,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallGetArgCount"
+	msg.Params = map[string]any{"call_id": call_id.String()}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return 0, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		res = 0
+		return
+	}
+
+	result, ok := result_any.(int)
+	if !ok {
+		return 0,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) CallGetArgValue(
+	call_id uuid.UUID,
+	index int,
+	response_timeout time.Duration,
+) (
+	res *ARPCArgInfo,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallGetArgValue"
+	msg.Params = map[string]any{
+		"call_id":   call_id.String(),
+		"arg_index": index,
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return nil, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		res = nil
+		return
+	}
+
+	var result *ARPCArgInfo
+
+	err = mapstructure.Decode(result_any, &result)
+	if err != nil {
+		return nil, false, false, nil, err
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) CallClose(
+	call_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		return
+	}
+
+	return false, false, nil, nil
+}
 
 // ----------------------------------------
 // Buffers
 // ----------------------------------------
 
-func (self *ARPCSolutionNode) GetBufferInfo(id uuid.UUID) (*ARPCBufferInfo, error)
-
-func (self *ARPCSolutionNode) GetBufferItemsFirstTime(id uuid.UUID) (time.Time, error)
-
-func (self *ARPCSolutionNode) GetBufferItemsLastTime(id uuid.UUID) (time.Time, error)
-
-func (self *ARPCSolutionNode) GetBufferItemsByIds(ids []uuid.UUID) (
-	buffer_items []*ARPCBufferItem,
+func (self *ARPCSolutionNode) BufferGetInfo(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	info *ARPCBufferInfo,
+	timedout bool,
+	closed bool,
+	result_err error,
 	err error,
-)
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetInfo"
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
 
-func (self *ARPCSolutionNode) GetBufferItemsStartingFromId(id uuid.UUID) (
-	buffer_items []*ARPCBufferItem,
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return nil, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		info = nil
+		return
+	}
+
+	var result *ARPCBufferInfo
+
+	err = mapstructure.Decode(result_any, &result)
+	if err != nil {
+		return nil, false, false, nil, err
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferGetItemsCount(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	count int,
+	timedout bool,
+	closed bool,
+	result_err error,
 	err error,
-)
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetItemsCount"
+	msg.Params = buffer_id.String()
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
 
-func (self *ARPCSolutionNode) GetBufferItemsByFirstLastId(
-	first_id uuid.UUID,
-	last_id uuid.UUID,
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return 0, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		count = 0
+		return
+	}
+
+	result, ok := result_any.(int)
+	if !ok {
+		return 0,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferGetItemsIds(
+	buffer_id uuid.UUID,
+	first_spec, last_spec *ARPCBufferItemSpecifier,
+	// TODO: do we need include_last?
+	// include_last bool,
+	response_timeout time.Duration,
+) (
+	ids []string,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetItemsIds"
+	msg.Params = buffer_id.String()
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return nil, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		ids = nil
+		return
+	}
+
+	result, ok := result_any.([]string)
+	if !ok {
+		return nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferGetItemsByIds(
+	buffer_id uuid.UUID,
+	ids []string,
+	response_timeout time.Duration,
 ) (
 	buffer_items []*ARPCBufferItem,
+	timedout bool,
+	closed bool,
+	result_err error,
 	err error,
-)
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetItemsByIds"
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+		"ids":       ids,
+	}
 
-func (self *ARPCSolutionNode) GetBufferItemsByFirstLastIdExcludingly(
-	first_id uuid.UUID,
-	last_id uuid.UUID,
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return nil, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		buffer_items = nil
+		return
+	}
+
+	result_any_slice, ok := result_any.([]any)
+	if !ok {
+		return nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	result := make([]*ARPCBufferItem, 0)
+
+	for _, i := range result_any_slice {
+		var x *ARPCBufferItem
+		x = nil
+		err = mapstructure.Decode(i, &x)
+		if err != nil {
+			return nil, false, false, nil, err
+		}
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferGetItemsFirstTime(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
 ) (
-	buffer_items []*ARPCBufferItem,
+	time_ time.Time,
+	timedout bool,
+	closed bool,
+	result_err error,
 	err error,
-)
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetItemsFirstTime"
+	msg.Params = buffer_id.String()
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
 
-func (self *ARPCSolutionNode) GetBufferItemsByFirstLastTime(
-	first_time time.Time,
-	last_time time.Time,
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return time.Time{}, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		time_ = time.Time{}
+		return
+	}
+
+	result_str, ok := result_any.(string)
+	if !ok {
+		return time.Time{},
+			false, false, nil, errors.New("result must be RFC3339Nano time string")
+	}
+
+	result, err := time.Parse(result_str, time.RFC3339Nano)
+	if err != nil {
+		return time.Time{},
+			false, false, nil, err
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferGetItemsLastTime(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
 ) (
-	buffer_items []*ARPCBufferItem,
+	time_ time.Time,
+	timedout bool,
+	closed bool,
+	result_err error,
 	err error,
-)
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetItemsIds"
+	msg.Params = buffer_id.String()
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
 
-func (self *ARPCSolutionNode) GetBufferItemsByFirstLastTimeExcludingly(
-	first_time time.Time,
-	last_time time.Time,
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return time.Time{}, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		time_ = time.Time{}
+		return
+	}
+
+	result_str, ok := result_any.(string)
+	if !ok {
+		return time.Time{},
+			false, false, nil, errors.New("result must be RFC3339Nano time string")
+	}
+
+	result, err := time.Parse(result_str, time.RFC3339Nano)
+	if err != nil {
+		return time.Time{}, false, false, nil, err
+	}
+
+	return result, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferSubscribeOnUpdatesNotification(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
 ) (
-	buffer_items []*ARPCBufferItem,
+	timedout bool,
+	closed bool,
+	result_err error,
 	err error,
-)
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferSubscribeOnUpdatesNotification"
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
 
-func (self *ARPCSolutionNode) BufferSubscribeOnUpdatesIndicator(buffer_id uuid.UUID) error
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		return
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferUnsubscribeFromUpdatesNotification(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferUnsubscribeFromUpdatesNotification"
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		return
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferGetIsSubscribedOnUpdatesNotification(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	result bool,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetIsSubscribedOnUpdatesNotification"
+	msg.Params = map[string]any{
+		"buffer_id": buffer_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err :=
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if timedout || closed || result_err != nil || err != nil {
+		return
+	}
+
+	result, ok := result_any.(bool)
+	if !ok {
+		return false,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	return false, false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferGetListSubscribedUpdatesNotifications(
+	response_timeout time.Duration,
+) (
+	buffer_id uuid.UUID,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "BufferGetListSubscribedUpdatesNotifications"
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return uuid.Nil, false, false, nil, err
+	}
+
+	result_any, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return uuid.Nil, false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferBinaryGetSize(
+	buffer_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	size int,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) BufferBinaryGetSlice(
+	buffer_id uuid.UUID,
+	start_index, end_index int,
+	response_timeout time.Duration,
+) (
+	data []byte,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
 
 // ----------------------------------------
 // Broadcasts
 // ----------------------------------------
 
-func (self *ARPCSolutionNode) BroadcastIdList() (
-	[]uuid.UUID,
-	error,
-)
+func (self *ARPCSolutionNode) TransmissionGetList(
+	response_timeout time.Duration,
+) (
+	buffer_id uuid.UUID,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
 
-func (self *ARPCSolutionNode) GetBroadcastInfo(broadcast_id uuid.UUID) (
-	*ARPCBroadcastInfo,
-	error,
-)
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
 
-func (self *ARPCSolutionNode) SubscribeOnNewBroadcasts() error
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) TransmissionGetInfo(
+	transmission_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	info *ARPCTransmissionInfo,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
 
 // ----------------------------------------
 // Sockets
 // ----------------------------------------
 
-func (self *ARPCSolutionNode) SocketsGetListeningIdList() (
-	[]uuid.UUID,
-	error,
-)
+func (self *ARPCSolutionNode) SocketGetList(
+	response_timeout time.Duration,
+) (
+	buffer_id uuid.UUID,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
 
-func (self *ARPCSolutionNode) SocketOpen(id uuid.UUID) error
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
 
-func (self *ARPCSolutionNode) SocketRead(id uuid.UUID, b []byte) (n int, err error)
-func (self *ARPCSolutionNode) SocketWrite(id uuid.UUID, b []byte) (n int, err error)
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
 
-func (self *ARPCSolutionNode) SocketClose(id uuid.UUID) error
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) SocketOpen(
+	listening_socket_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	connected_socket_id uuid.UUID,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) SocketRead(
+	connected_socket_id uuid.UUID,
+	try_read_size int,
+	response_timeout time.Duration,
+) (
+	b []byte,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) SocketWrite(
+	connected_socket_id uuid.UUID,
+	b []byte,
+	response_timeout time.Duration,
+) (
+	n int,
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) SocketClose(
+	connected_socket_id uuid.UUID,
+	response_timeout time.Duration,
+) (
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"connected_socket_id": connected_socket_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) SocketSetDeadline(
+	connected_socket_id uuid.UUID,
+	t time.Time,
+	response_timeout time.Duration,
+) (
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) SocketSetReadDeadline(
+	connected_socket_id uuid.UUID,
+	t time.Time,
+	response_timeout time.Duration,
+) (
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}
+
+func (self *ARPCSolutionNode) SocketSetWriteDeadline(
+	connected_socket_id uuid.UUID,
+	t time.Time,
+	response_timeout time.Duration,
+) (
+	timedout bool,
+	closed bool,
+	result_err error,
+	err error,
+) {
+	msg := new(gojsonrpc2.Message)
+	msg.Method = "CallClose"
+	msg.Params = map[string]any{
+		"call_id": call_id.String(),
+	}
+
+	timedout_sig, closed_sig, msg_sig, rh :=
+		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
+
+	_, err = self.jrpc_node.SendRequest(
+		msg,
+		true,
+		false,
+		rh,
+		response_timeout,
+		nil,
+	)
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	_, timedout, closed, result_err, err =
+		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
+
+	if err != nil {
+		return false, false, nil, err
+	}
+
+	return false, false, nil, nil
+}

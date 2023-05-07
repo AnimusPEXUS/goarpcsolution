@@ -239,7 +239,9 @@ type ARPCSolutionCtlI interface {
 		err_processing_not_internal, err_processing_internal error,
 	)
 
-	SocketOpen(listening_socket_id uuid.UUID) (
+	SocketOpen(
+		listening_socket_id uuid.UUID,
+	) (
 		connected_socket_id uuid.UUID,
 		err_processing_not_internal, err_processing_internal error,
 	)
