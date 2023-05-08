@@ -2185,14 +2185,27 @@ func (self *ARPCSolutionNode) BufferGetListSubscribedUpdatesNotifications(
 		return uuid.Nil, false, false, nil, err
 	}
 
-	result_any, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return uuid.Nil, false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		buffer_id = uuid.Nil
+		return
 	}
 
-	return false, false, nil, nil
+	result_str, ok := result_any.(string)
+	if !ok {
+		return uuid.Nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	result := uuid.FromStringOrNil(result_str)
+	if uuid.Equal(uuid.Nil, result) {
+		return uuid.Nil,
+			false, false, nil, errors.New("invalid uuid")
+	}
+
+	return result, false, false, nil, nil
 }
 
 func (self *ARPCSolutionNode) BufferBinaryGetSize(
@@ -2206,9 +2219,9 @@ func (self *ARPCSolutionNode) BufferBinaryGetSize(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "BufferBinaryGetSize"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"buffer_id": buffer_id.String(),
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2223,17 +2236,23 @@ func (self *ARPCSolutionNode) BufferBinaryGetSize(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return 0, false, false, nil, err
 	}
 
-	_, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		buffer_id = uuid.Nil
+		return
 	}
 
-	return false, false, nil, nil
+	result, ok := result_any.(int)
+	if !ok {
+		return 0, false, false, nil, errors.New("result must be uuid string")
+	}
+
+	return result, false, false, nil, nil
 }
 
 func (self *ARPCSolutionNode) BufferBinaryGetSlice(
@@ -2248,9 +2267,11 @@ func (self *ARPCSolutionNode) BufferBinaryGetSlice(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "BufferBinaryGetSlice"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"buffer_id":   buffer_id.String(),
+		"start_index": start_index,
+		"end_index":   end_index,
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2265,17 +2286,18 @@ func (self *ARPCSolutionNode) BufferBinaryGetSlice(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return nil, false, false, nil, err
 	}
 
 	_, timedout, closed, result_err, err =
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		buffer_id = uuid.Nil
+		return
 	}
 
-	return false, false, nil, nil
+	return nil, false, false, nil, nil
 }
 
 // ----------------------------------------
@@ -2292,10 +2314,7 @@ func (self *ARPCSolutionNode) TransmissionGetList(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
-	msg.Params = map[string]any{
-		"call_id": call_id.String(),
-	}
+	msg.Method = "TransmissionGetList"
 
 	timedout_sig, closed_sig, msg_sig, rh :=
 		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
@@ -2309,17 +2328,30 @@ func (self *ARPCSolutionNode) TransmissionGetList(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return uuid.Nil, false, false, nil, err
 	}
 
-	_, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		buffer_id = uuid.Nil
+		return
 	}
 
-	return false, false, nil, nil
+	result_str, ok := result_any.(string)
+	if !ok {
+		return uuid.Nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	result := uuid.FromStringOrNil(result_str)
+	if uuid.Equal(uuid.Nil, result) {
+		return uuid.Nil,
+			false, false, nil, errors.New("invalid uuid")
+	}
+
+	return result, false, false, nil, nil
 }
 
 func (self *ARPCSolutionNode) TransmissionGetInfo(
@@ -2333,9 +2365,9 @@ func (self *ARPCSolutionNode) TransmissionGetInfo(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "TransmissionGetInfo"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"transmission_id": transmission_id.String(),
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2350,17 +2382,25 @@ func (self *ARPCSolutionNode) TransmissionGetInfo(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return nil, false, false, nil, err
 	}
 
-	_, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		info = nil
+		return
 	}
 
-	return false, false, nil, nil
+	var result *ARPCTransmissionInfo
+
+	err = mapstructure.Decode(result_any, &result)
+	if err != nil {
+		return nil, false, false, nil, err
+	}
+
+	return result, false, false, nil, nil
 }
 
 // ----------------------------------------
@@ -2377,10 +2417,7 @@ func (self *ARPCSolutionNode) SocketGetList(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
-	msg.Params = map[string]any{
-		"call_id": call_id.String(),
-	}
+	msg.Method = "SocketGetList"
 
 	timedout_sig, closed_sig, msg_sig, rh :=
 		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
@@ -2394,17 +2431,30 @@ func (self *ARPCSolutionNode) SocketGetList(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return uuid.Nil, false, false, nil, err
 	}
 
-	_, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		buffer_id = uuid.Nil
+		return
 	}
 
-	return false, false, nil, nil
+	result_str, ok := result_any.(string)
+	if !ok {
+		return uuid.Nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	result := uuid.FromStringOrNil(result_str)
+	if uuid.Equal(uuid.Nil, result) {
+		return uuid.Nil,
+			false, false, nil, errors.New("invalid uuid")
+	}
+
+	return result, false, false, nil, nil
 }
 
 func (self *ARPCSolutionNode) SocketOpen(
@@ -2418,9 +2468,9 @@ func (self *ARPCSolutionNode) SocketOpen(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "SocketOpen"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"listening_socket_id": listening_socket_id.String(),
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2435,17 +2485,30 @@ func (self *ARPCSolutionNode) SocketOpen(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return uuid.Nil, false, false, nil, err
 	}
 
-	_, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		connected_socket_id = uuid.Nil
+		return
 	}
 
-	return false, false, nil, nil
+	result_str, ok := result_any.(string)
+	if !ok {
+		return uuid.Nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	result := uuid.FromStringOrNil(result_str)
+	if uuid.Equal(uuid.Nil, result) {
+		return uuid.Nil,
+			false, false, nil, errors.New("invalid uuid")
+	}
+
+	return result, false, false, nil, nil
 }
 
 func (self *ARPCSolutionNode) SocketRead(
@@ -2460,9 +2523,10 @@ func (self *ARPCSolutionNode) SocketRead(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "SocketRead"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"connected_socket_id": connected_socket_id.String(),
+		"try_read_size":       try_read_size,
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2477,17 +2541,24 @@ func (self *ARPCSolutionNode) SocketRead(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return nil, false, false, nil, err
 	}
 
-	_, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		b = nil
+		return
 	}
 
-	return false, false, nil, nil
+	result, ok := result_any.([]byte)
+	if !ok {
+		return nil,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	return result, false, false, nil, nil
 }
 
 func (self *ARPCSolutionNode) SocketWrite(
@@ -2502,9 +2573,10 @@ func (self *ARPCSolutionNode) SocketWrite(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "SocketWrite"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"connected_socket_id": connected_socket_id.String(),
+		"b":                   b,
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2519,17 +2591,24 @@ func (self *ARPCSolutionNode) SocketWrite(
 		nil,
 	)
 	if err != nil {
-		return false, false, nil, err
+		return 0, false, false, nil, err
 	}
 
-	_, timedout, closed, result_err, err =
+	result_any, timedout, closed, result_err, err :=
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		n = 0
+		return
 	}
 
-	return false, false, nil, nil
+	result, ok := result_any.(int)
+	if !ok {
+		return 0,
+			false, false, nil, errors.New("result must be uuid string")
+	}
+
+	return result, false, false, nil, nil
 }
 
 func (self *ARPCSolutionNode) SocketClose(
@@ -2565,8 +2644,8 @@ func (self *ARPCSolutionNode) SocketClose(
 	_, timedout, closed, result_err, err =
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		return
 	}
 
 	return false, false, nil, nil
@@ -2583,9 +2662,10 @@ func (self *ARPCSolutionNode) SocketSetDeadline(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "SocketSetDeadline"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"connected_socket_id": connected_socket_id.String(),
+		"t":                   t.Format(time.RFC3339Nano),
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2606,8 +2686,8 @@ func (self *ARPCSolutionNode) SocketSetDeadline(
 	_, timedout, closed, result_err, err =
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		return
 	}
 
 	return false, false, nil, nil
@@ -2624,9 +2704,10 @@ func (self *ARPCSolutionNode) SocketSetReadDeadline(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "SocketSetReadDeadline"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"connected_socket_id": connected_socket_id.String(),
+		"t":                   t.Format(time.RFC3339Nano),
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2647,8 +2728,8 @@ func (self *ARPCSolutionNode) SocketSetReadDeadline(
 	_, timedout, closed, result_err, err =
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		return
 	}
 
 	return false, false, nil, nil
@@ -2665,9 +2746,10 @@ func (self *ARPCSolutionNode) SocketSetWriteDeadline(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = "SocketSetWriteDeadline"
 	msg.Params = map[string]any{
-		"call_id": call_id.String(),
+		"connected_socket_id": connected_socket_id.String(),
+		"t":                   t.Format(time.RFC3339Nano),
 	}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -2688,8 +2770,8 @@ func (self *ARPCSolutionNode) SocketSetWriteDeadline(
 	_, timedout, closed, result_err, err =
 		self.subResultGetter01(timedout_sig, closed_sig, msg_sig)
 
-	if err != nil {
-		return false, false, nil, err
+	if timedout || closed || result_err != nil || err != nil {
+		return
 	}
 
 	return false, false, nil, nil
