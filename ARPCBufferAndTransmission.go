@@ -48,7 +48,7 @@ type ARPCTransmissionInfo struct {
 	BufferIds        []*uuid.UUID
 }
 
-type ARPCBuffer interface {
+type ARPCBufferI interface {
 	GetInfo() *ARPCBufferInfo
 	ItemCount() int
 	// if not found - it's not error and 2nd result is false

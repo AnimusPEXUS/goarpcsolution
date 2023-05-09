@@ -1,7 +1,6 @@
 package goarpcsolution
 
 import (
-	"errors"
 	"net"
 )
 
@@ -54,25 +53,25 @@ func (self *ARPCMediaBuffer) GetReadWriteSeekCloser() ReadWriteSeekCloser {
 
 // recommended maximum data size - 1024 bytes
 // fixed maximum data size - 2 MiB
-func (self *ARPCMediaBroadcast) PushFeed(data []byte) error {
-	data_size := int64(len(data))
+// func (self *ARPCMediaBroadcast) PushFeed(data []byte) error {
+// 	data_size := int64(len(data))
 
-	// those checks vere checking parameters, as index and end was
-	// parameters. checks are left and will be ermoved at some point
-	// todo: remove checks?
-	if data_size > (2 * 1024 * 1024) {
-		return errors.New("bufer is too big. 2MiB maximum")
-	}
+// 	// those checks vere checking parameters, as index and end was
+// 	// parameters. checks are left and will be ermoved at some point
+// 	// todo: remove checks?
+// 	if data_size > (2 * 1024 * 1024) {
+// 		return errors.New("bufer is too big. 2MiB maximum")
+// 	}
 
-	index := self.buffer_size_tracker
+// 	index := self.buffer_size_tracker
 
-	if index < 0 {
-		return errors.New("invalid 'index' value")
-	}
+// 	if index < 0 {
+// 		return errors.New("invalid 'index' value")
+// 	}
 
-	end := index + data_size
+// 	end := index + data_size
 
-	return nil
-}
+// 	return nil
+// }
 
 /////////////// Socket Functions
