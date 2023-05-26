@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230511030021-0ae12ef9a912
-	github.com/AnimusPEXUS/gouuidtools v0.0.0-20230521093300-b76e91ad7317
+	github.com/AnimusPEXUS/gouuidtools v0.0.0-20230521093508-730badef6f73
 	github.com/AnimusPEXUS/utils v0.0.0-20230429235807-5de56d5918ef
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/satori/go.uuid v1.2.0
