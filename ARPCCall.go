@@ -28,8 +28,56 @@ func (self *ARPCCall) IsValidError() error {
 	return nil
 }
 
-func (self *ARPCCall) IsValid() bool {
-	return self.IsValidError() == nil
+func (self *ARPCCall) IsInvalid() bool {
+	return self.IsValidError() != nil
+}
+
+// ReplyToId != nil
+func (self *ARPCCall) HasReplyToIdField() bool {
+	return self.ReplyToId != nil
+}
+
+// Error != nil
+func (self *ARPCCall) HasErrorFields() bool {
+	return self.ReplyErrCode != 0 || self.ReplyErrMsg != ""
+}
+
+// HasReplyToIdField()
+func (self *ARPCCall) HasRequestFields() bool {
+	return self.HasReplyToIdField()
+}
+
+// self.HasResultField() || self.HasErrorField()
+func (self *ARPCCall) HasResponseFields() bool {
+	return self.HasReplyToIdField() || self.HasErrorFields()
+}
+
+func (self *ARPCCall) IsResponseOrError() bool {
+
+	if self.IsInvalid() {
+		return false
+	}
+
+	return self.HasResponseFields()
+}
+
+func (self *ARPCCall) IsResponseAndNotError() bool {
+
+	if self.IsInvalid() {
+		return false
+	}
+
+	return self.HasReplyToIdField() && !self.HasErrorFields()
+}
+
+// is response and is error
+func (self *ARPCCall) IsError() bool {
+
+	if self.IsInvalid() {
+		return false
+	}
+
+	return !self.HasReplyToIdField() && self.HasErrorFields()
 }
 
 func (self *ARPCCall) GenARPCCallForJSON() *ARPCCallForJSON {

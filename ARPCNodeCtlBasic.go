@@ -3,6 +3,7 @@ package goarpcsolution
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/AnimusPEXUS/gouuidtools"
@@ -16,6 +17,9 @@ import (
 const TTL_CONST_10MIN = time.Duration(time.Minute * 10)
 
 type ARPCNodeCtlBasic struct {
+	OnCallCB            func(call *ARPCCall) (error, error)
+	OnUnhandledResultCB func(result *ARPCCall)
+
 	call_id_r             *gouuidtools.UUIDRegistry
 	buffer_id_r           *gouuidtools.UUIDRegistry
 	transmission_id_r     *gouuidtools.UUIDRegistry
@@ -28,8 +32,12 @@ type ARPCNodeCtlBasic struct {
 	listening_sockets []*ARPCNodeCtlBasicListeningSocketR
 	connected_sockets []*ARPCNodeCtlBasicConnectedSocketR
 
-	stop_flag      bool
-	cleaner_worker *worker.Worker
+	handlers_mutex *sync.Mutex
+	handlers       []*xARPCNodeCtlBasicCallResHandlerWrapper
+
+	wrkr *worker.Worker
+
+	stop_flag bool
 
 	node *ARPCNode
 
@@ -39,7 +47,7 @@ type ARPCNodeCtlBasic struct {
 func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 	self := new(ARPCNodeCtlBasic)
 	self.debugName = "ARPCNodeCtlBasic"
-	self.cleaner_worker = worker.New(self.cleanerWorker)
+	self.wrkr = worker.New(self.cleanerWorker)
 	return self
 }
 
@@ -85,8 +93,10 @@ func (self *ARPCNodeCtlBasic) cleanerWorker(
 			if x.TTL <= 0 {
 				self.calls =
 					append(self.calls[:i], self.calls[i+1:]...)
+				x.Deleted()
+			} else {
+				x.TTL -= time.Second
 			}
-			x.Deleted()
 		}
 
 		for i := len(self.buffers) - 1; i != -1; i-- {
@@ -94,8 +104,10 @@ func (self *ARPCNodeCtlBasic) cleanerWorker(
 			if x.TTL <= 0 {
 				self.buffers =
 					append(self.buffers[:i], self.buffers[i+1:]...)
+				x.Deleted()
+			} else {
+				x.TTL -= time.Second
 			}
-			x.Deleted()
 		}
 
 		for i := len(self.transmissions) - 1; i != -1; i-- {
@@ -106,8 +118,10 @@ func (self *ARPCNodeCtlBasic) cleanerWorker(
 						self.transmissions[:i],
 						self.transmissions[i+1:]...,
 					)
+				x.Deleted()
+			} else {
+				x.TTL -= time.Second
 			}
-			x.Deleted()
 		}
 
 		for i := len(self.listening_sockets) - 1; i != -1; i-- {
@@ -118,8 +132,10 @@ func (self *ARPCNodeCtlBasic) cleanerWorker(
 						self.listening_sockets[:i],
 						self.listening_sockets[i+1:]...,
 					)
+				x.Deleted()
+			} else {
+				x.TTL -= time.Second
 			}
-			x.Deleted()
 		}
 
 		for i := len(self.connected_sockets) - 1; i != -1; i-- {
@@ -130,8 +146,10 @@ func (self *ARPCNodeCtlBasic) cleanerWorker(
 						self.connected_sockets[:i],
 						self.connected_sockets[i+1:]...,
 					)
+				x.Deleted()
+			} else {
+				x.TTL -= time.Second
 			}
-			x.Deleted()
 		}
 
 		time.Sleep(time.Second)
@@ -145,10 +163,16 @@ func (self *ARPCNodeCtlBasic) cleanerWorker(
 
 func (self *ARPCNodeCtlBasic) Call(
 	name string,
-	args ...*ARPCCallArg,
-) (
-	err error,
-) {
+	args []*ARPCCallArg,
+
+	unhandled bool,
+	rh *ARPCNodeCtlBasicCallResHandler,
+	response_timeout time.Duration,
+	// note: not sure if this is needed here. but it's possible
+	//       should be used to retreive call_id before actual
+	//       call is done
+	// request_id_hook *ARPCNodeCtlBasicNewCallIdHook,
+) (ret_any *gouuidtools.UUID, ret_err error) {
 
 	call_id, err := self.call_id_r.GenUUID(nil)
 	if err != nil {
@@ -164,7 +188,7 @@ func (self *ARPCNodeCtlBasic) Call(
 	)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = self.node.NewCall(
@@ -173,10 +197,10 @@ func (self *ARPCNodeCtlBasic) Call(
 	)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return call_id, nil
 }
 
 func (self *ARPCNodeCtlBasic) Reply(
@@ -433,4 +457,16 @@ type ARPCNodeCtlBasicConnectedSocketR struct {
 
 func (self *ARPCNodeCtlBasicConnectedSocketR) Deleted() {
 
+}
+
+type xARPCNodeCtlBasicCallResHandlerWrapper struct {
+	handler *ARPCNodeCtlBasicCallResHandler
+	id      *gouuidtools.UUID
+	timeout time.Duration
+}
+
+type ARPCNodeCtlBasicCallResHandler struct {
+	OnTimeout  func()
+	OnClose    func()
+	OnResponse func(args *ARPCCall)
 }
