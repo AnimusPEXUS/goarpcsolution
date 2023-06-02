@@ -3,6 +3,7 @@ package goarpcsolution
 import (
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 // but, frankly, it's the best value. which, probably doesn't need
 // to be variable
 const TTL_CONST_10MIN = time.Duration(time.Minute * 10)
+
+var _ ARPCNodeCtlI = &ARPCNodeCtlBasic{}
 
 type ARPCNodeCtlBasic struct {
 	OnCallCB            func(call *ARPCCall) (error, error)
@@ -220,7 +223,10 @@ func (self *ARPCNodeCtlBasic) deleteTransmissionR_lrc(
 
 	for i := len(self.transmissions) - 1; i != -1; i-- {
 		if self.transmissions[i] == obj {
-			self.transmissions = append(self.transmissions[:i], self.transmissions[i+1:]...)
+			self.transmissions = append(
+				self.transmissions[:i],
+				self.transmissions[i+1:]...,
+			)
 		}
 	}
 }
@@ -504,6 +510,285 @@ func (self *ARPCNodeCtlBasic) saveCall(
 	)
 
 	return nil
+}
+
+func (self *ARPCNodeCtlBasic) SocketGetConn(
+	connected_socket_id *gouuidtools.UUID,
+) (net.Conn, error) {
+	return nil, nil
+}
+
+func (self *ARPCNodeCtlBasic) NewCall(
+	call_id *gouuidtools.UUID,
+	response_on *gouuidtools.UUID,
+) {
+}
+
+func (self *ARPCNodeCtlBasic) NewBuffer(
+	buffer_id *gouuidtools.UUID,
+) {
+}
+
+func (self *ARPCNodeCtlBasic) BufferUpdated(
+	buffer_id *gouuidtools.UUID,
+) {
+}
+
+func (self *ARPCNodeCtlBasic) NewTransmission(
+	tarnsmission_id *gouuidtools.UUID,
+) {
+}
+
+func (self *ARPCNodeCtlBasic) NewSocket(
+	listening_socket_id *gouuidtools.UUID,
+) {
+}
+
+func (self *ARPCNodeCtlBasic) CallGetList() (
+	buffer_id *gouuidtools.UUID,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) CallGetName(
+	call_id *gouuidtools.UUID,
+) (
+	name string,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return "", nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) CallGetArgCount(
+	call_id *gouuidtools.UUID,
+) (
+	res int,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return 0, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) CallGetArgValues(
+	call_id *gouuidtools.UUID,
+	first, last int,
+) (
+	res []*ARPCArgInfo,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) CallClose(
+	call_id *gouuidtools.UUID,
+) (
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetInfo(
+	buffer_id *gouuidtools.UUID,
+) (
+	info *ARPCCallForJSON,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetItemsCount(
+	buffer_id *gouuidtools.UUID,
+) (
+	count int,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return 0, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetItemsIds(
+	buffer_id *gouuidtools.UUID,
+	first_spec, last_spec *ARPCBufferItemSpecifier,
+) (
+	ids []string,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetItemsTimesByIds(
+	buffer_id *gouuidtools.UUID,
+	ids []string,
+) (
+	times []time.Time,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetItemsByIds(
+	buffer_id *gouuidtools.UUID,
+	ids []string,
+) (
+	buffer_items []*ARPCBufferItem,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetItemsFirstTime(
+	buffer_id *gouuidtools.UUID,
+) (
+	time_ time.Time,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return time.Time{}, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetItemsLastTime(
+	buffer_id *gouuidtools.UUID,
+) (
+	time_ time.Time,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return time.Time{}, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferSubscribeOnUpdatesNotification(
+	buffer_id *gouuidtools.UUID,
+) (
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferUnsubscribeFromUpdatesNotification(
+	buffer_id *gouuidtools.UUID,
+) (
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetIsSubscribedOnUpdatesNotification(
+	buffer_id *gouuidtools.UUID,
+) (
+	r bool,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return false, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferGetListSubscribedUpdatesNotifications() (
+	buffer_id *gouuidtools.UUID,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferBinaryGetSize(
+	buffer_id *gouuidtools.UUID,
+) (
+	size int,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return 0, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) BufferBinaryGetSlice(
+	buffer_id *gouuidtools.UUID,
+	start_index, end_index int,
+) (
+	data []byte,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) TransmissionGetList() (
+	buffer_id *gouuidtools.UUID,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) TransmissionGetInfo(
+	transmission_id *gouuidtools.UUID,
+) (
+	info *ARPCTransmissionInfo,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketGetList() (
+	buffer_id *gouuidtools.UUID,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketOpen(
+	listening_socket_id *gouuidtools.UUID,
+) (
+	connected_socket_id *gouuidtools.UUID,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketRead(
+	connected_socket_id *gouuidtools.UUID,
+	try_read_size int,
+) (
+	b []byte,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketWrite(
+	connected_socket_id *gouuidtools.UUID,
+	b []byte,
+) (
+	n int,
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return 0, nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketClose(
+	connected_socket_id *gouuidtools.UUID,
+) (
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketSetDeadline(
+	connected_socket_id *gouuidtools.UUID,
+	t time.Time,
+) (
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketSetReadDeadline(
+	connected_socket_id *gouuidtools.UUID,
+	t time.Time,
+) (
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, errors.New("not implimented")
+}
+
+func (self *ARPCNodeCtlBasic) SocketSetWriteDeadline(
+	connected_socket_id *gouuidtools.UUID,
+	t time.Time,
+) (
+	err_processing_not_internal, err_processing_internal error,
+) {
+	return nil, errors.New("not implimented")
 }
 
 // 'R' at the end of next structs - stands for 'Record'

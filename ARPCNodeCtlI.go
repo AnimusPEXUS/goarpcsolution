@@ -163,14 +163,14 @@ type ARPCNodeCtlI interface {
 	BufferGetItemsFirstTime(
 		buffer_id *gouuidtools.UUID,
 	) (
-		time time.Time,
+		time_ time.Time,
 		err_processing_not_internal, err_processing_internal error,
 	)
 
 	BufferGetItemsLastTime(
 		buffer_id *gouuidtools.UUID,
 	) (
-		time time.Time,
+		time_ time.Time,
 		err_processing_not_internal, err_processing_internal error,
 	)
 
@@ -190,7 +190,7 @@ type ARPCNodeCtlI interface {
 	BufferGetIsSubscribedOnUpdatesNotification(
 		buffer_id *gouuidtools.UUID,
 	) (
-		bool,
+		r bool,
 		err_processing_not_internal, err_processing_internal error,
 	)
 
