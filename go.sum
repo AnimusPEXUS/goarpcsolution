@@ -1,9 +1,9 @@
-github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230511030021-0ae12ef9a912 h1:6nrtseVlsN6MSxl8Vmv32Cmg7ham8GvVF7QMGlSW6bY=
-github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230511030021-0ae12ef9a912/go.mod h1:WEfyq024e2Fmnh6ZhOvkY95e3ZcFPvIANGX+QbQhOWg=
+github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230604165602-032924975eaf h1:ROye1//ijAEEUI5eKJFCVv05eo9Hdvx7mlqfd92UAE0=
+github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230604165602-032924975eaf/go.mod h1:YGfCRIFxTlHGgQG7Vg7UC/q+5poSK6Arzb1GwC74BEg=
 github.com/AnimusPEXUS/golockerreentrancycontext v0.0.0-20230205202617-6e6a53c419ed h1:qGTO2fbCFtcb0asmUUq/jGw0joYb206u78ey0gkl/BQ=
 github.com/AnimusPEXUS/golockerreentrancycontext v0.0.0-20230205202617-6e6a53c419ed/go.mod h1:MVQsxAvekQWhuo4s0F+N2PxVeTOGqUwQgXATWa2IggI=
-github.com/AnimusPEXUS/gouuidtools v0.0.0-20230531143600-73cc0113c445 h1:B8wGpTwZ50DQvEbOBx7Z6urDunN1GZRS2x8GVG9YIC8=
-github.com/AnimusPEXUS/gouuidtools v0.0.0-20230531143600-73cc0113c445/go.mod h1:kGZCqtUsugQ9V8BgUzsn4602KQKC2j41U8nHO62acBU=
+github.com/AnimusPEXUS/gouuidtools v0.0.0-20230604162424-bdda2f021c7d h1:3cnpX1fEEsIV4dBKiHnbiRx2DavCcMWyNAep8ss8uRk=
+github.com/AnimusPEXUS/gouuidtools v0.0.0-20230604162424-bdda2f021c7d/go.mod h1:kGZCqtUsugQ9V8BgUzsn4602KQKC2j41U8nHO62acBU=
 github.com/AnimusPEXUS/utils v0.0.0-20230429235807-5de56d5918ef h1:fXfsWxV4Fgt+NRf5km1bPcBvJVG57edx72QUF7VINq8=
 github.com/AnimusPEXUS/utils v0.0.0-20230429235807-5de56d5918ef/go.mod h1:qEzA426LPDVc5bFqhazSQ8Q3iJP/04/h+VZzbY9BewQ=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
