@@ -1,8 +1,8 @@
-module github.com/AnimusPEXUS/gorpcsolution/examples/01_proto
+module github.com/AnimusPEXUS/goarpcsolution/examples/01_proto
 
 go 1.19
 
-require github.com/AnimusPEXUS/gorpcsolution v0.0.0
+require github.com/AnimusPEXUS/goarpcsolution v0.0.0
 
 require (
 	github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230604165602-032924975eaf // indirect
@@ -12,4 +12,4 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 )
 
-replace github.com/AnimusPEXUS/gorpcsolution => ../..
+replace github.com/AnimusPEXUS/goarpcsolution => ../..

@@ -1,4 +1,4 @@
-module github.com/AnimusPEXUS/gorpcsolution
+module github.com/AnimusPEXUS/goarpcsolution
 
 go 1.19
 

@@ -4,35 +4,23 @@ import (
 	"net"
 	"time"
 
+	"github.com/AnimusPEXUS/gojsonrpc2"
 	"github.com/AnimusPEXUS/gouuidtools"
 )
 
-// about UUID is:
-//
-// it is adviced to keep in mind, what UUIDs of
-// Calls, Buffers, Transmissions, available and connected sockets
-// does not share space and resources can have identicall UUID, thou
-// belonging to different things.
-//
-// once more:
-// we have few groups (spaces) of separate IDs. those groups are:
-// 1. Calls
-// 2. Buffers
-// 3. Transmissions
-// 4. Available Sockets
-// 5. Connected sockets
-//
-// so if You got, say, 'aaaa' UUID indicating an Available Socket,
-// this doesn't mean 'you can't get same aaaa UUID for opened socket'
-
 type ARPCNodeCtlI interface {
+
+	// this is just like same named cb in node of gojsonrpc2, with exception:
+	// to get here, message should be sent with "s:"
+	// prefix in method name. but this msg.Method will be with "s:" removed.
+	OnRequestCB(msg *gojsonrpc2.Message) (error, error)
 
 	// get local representation of remote connected socket
 	SocketGetConn(connected_socket_id *gouuidtools.UUID) (net.Conn, error)
 
-	// ============ VVVVVVVVVVVVVVVVVVVVV ============
+	// =========== vvvvvvvvvvvvvvvvvvvvvvv ===========
 	// ----------- node functions handlers -----------
-	// ============ VVVVVVVVVVVVVVVVVVVVV ============
+	// =========== vvvvvvvvvvvvvvvvvvvvvvv ===========
 
 	// ----------------------------------------
 	// Notifications
@@ -45,9 +33,9 @@ type ARPCNodeCtlI interface {
 	)
 
 	// inform node about new buffer availability
-	NewBuffer(
-		buffer_id *gouuidtools.UUID,
-	)
+	// NewBuffer(
+	// 	buffer_id *gouuidtools.UUID,
+	// )
 
 	// you have to subscribe to bufffer updates to receive this
 	// notifications (see BufferSubscribeOnUpdatesNotification())
@@ -57,13 +45,13 @@ type ARPCNodeCtlI interface {
 
 	// inform node about new transmission availability
 	NewTransmission(
-		tarnsmission_id *gouuidtools.UUID,
+		transmission_id *gouuidtools.UUID,
 	)
 
 	// inform node about new socket availability
-	NewSocket(
-		listening_socket_id *gouuidtools.UUID,
-	)
+	// NewSocket(
+	// 	listening_socket_id *gouuidtools.UUID,
+	// )
 
 	// ----------------------------------------
 	// Basic Calls

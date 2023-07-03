@@ -3,6 +3,7 @@ package goarpcsolution
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AnimusPEXUS/gojsonrpc2"
@@ -36,9 +37,7 @@ func NewARPCNode(
 
 	self.jrpc_node.OnRequestCB =
 		func(msg *gojsonrpc2.Message) (error, error) {
-			e1, _, e3 := self.PushMessageFromOutside(msg)
-			// TODO: maybe upward functions have to be upgraded to receive 3 errors
-			return e1, e3
+			return self.handleJRPCMessage(msg)
 		}
 
 	return self
@@ -65,18 +64,109 @@ func (self *ARPCNode) DebugPrintfln(format string, data ...any) {
 	)
 }
 
+func (self *ARPCNode) Close() {
+	if self.jrpc_node != nil {
+		self.jrpc_node.Close()
+		self.jrpc_node = nil
+	}
+}
+
+// ============ vvvvvvvvvvvvvvvvvvvv ============
+// ------------ gojsonrpc2 functions ------------
+// ============ vvvvvvvvvvvvvvvvvvvv ============
+
+// sometimes this may be more convinient than ARPC Call
+
+// note: this function always adds "s:" prefix to msg.Method
+// note: just like in gojsonrpc2 this function doesn't check msg on
+//
+//	validity
+func (self *ARPCNode) SendMessage(msg *gojsonrpc2.Message) error {
+	msg.Method = "s:" + msg.Method
+	return self.jrpc_node.SendMessage(msg)
+}
+
+// note: this function always adds "s:" prefix to msg.Method
+// note: error if msg invalid
+func (self *ARPCNode) SendRequest(
+	msg *gojsonrpc2.Message,
+	genid bool,
+	unhandled bool,
+	rh *gojsonrpc2.JSONRPC2NodeRespHandler,
+	response_timeout time.Duration,
+	request_id_hook *gojsonrpc2.JSONRPC2NodeNewRequestIdHook,
+) (ret_any any, ret_err error) {
+	err := msg.IsInvalidError()
+	if err != nil {
+		return nil, err
+	}
+	if msg.Method != "" {
+		msg.Method = "s:" + msg.Method
+	}
+	return self.jrpc_node.SendRequest(
+		msg, genid, unhandled, rh, response_timeout, request_id_hook,
+	)
+}
+
+// note: this function always adds "s:" prefix to msg.Method
+// note: error if msg invalid
+func (self *ARPCNode) SendNotification(msg *gojsonrpc2.Message) error {
+	err := msg.IsInvalidError()
+	if err != nil {
+		return err
+	}
+	if msg.Method != "" {
+		msg.Method = "s:" + msg.Method
+	}
+	return self.jrpc_node.SendNotification(msg)
+}
+
+func (self *ARPCNode) SendResponse(msg *gojsonrpc2.Message) error {
+	err := msg.IsInvalidError()
+	if err != nil {
+		return err
+	}
+	// if msg.Method != "" {
+	// 	msg.Method = "s:" + msg.Method
+	// }
+	return self.jrpc_node.SendResponse(msg)
+
+}
+
+func (self *ARPCNode) SendError(msg *gojsonrpc2.Message) error {
+	err := msg.IsInvalidError()
+	if err != nil {
+		return err
+	}
+	// if msg.Method != "" {
+	// 	msg.Method = "s:" + msg.Method
+	// }
+	return self.jrpc_node.SendError(msg)
+}
+
+// ============ ^^^^^^^^^^^^^^^^^^^^ ============
+
 // ----------------------------------------
 // handle incomming messages
 // ----------------------------------------
 
+func (self *ARPCNode) PushMessageFromOutside(data []byte) (error, error) {
+	return self.jrpc_node.PushMessageFromOutside(data)
+}
+
+func (self *ARPCNode) handleMessage_jrpc2(
+	msg *gojsonrpc2.Message,
+) (error, error) {
+	return self.controller.OnRequestCB(msg)
+}
+
 // this function handles actual response to peer node by it self.
 // results here are for internal use only.
 // 1st value is for protocol (input) error;
-// 2nd error is error which returned to peer;
-// 3rd error is internal server error not intended to be returned to peer.
-func (self *ARPCNode) PushMessageFromOutside(
+// 2nd other errors
+func (self *ARPCNode) handleJRPCNodeMessage(
 	msg *gojsonrpc2.Message,
-) (error, error, error) {
+) (error, error) {
 
 	if debug {
 		self.DebugPrintln("PushMessageFromOutside()")
@@ -85,9 +175,14 @@ func (self *ARPCNode) PushMessageFromOutside(
 	msg_id, msg_has_id := msg.GetId()
 
 	if self.controller == nil {
+		// TODO: replace with panic?
 		return nil,
-			nil,
 			errors.New("handling controller undefined")
+	}
+
+	if strings.HasPrefix(msg.Method, "jrpc2:") {
+		msg.Method = msg.Method[6:]
+		return self.handleMessage_jrpc2(msg)
 	}
 
 	var msg_par map[string]any
@@ -95,7 +190,6 @@ func (self *ARPCNode) PushMessageFromOutside(
 	msg_par, ok := (msg.Params).(map[string]any)
 	if !ok {
 		return errors.New("can't convert msg.Params to map[string]any"),
-			errors.New("protocol error"),
 			errors.New("protocol error")
 	}
 
@@ -180,34 +274,34 @@ func (self *ARPCNode) PushMessageFromOutside(
 			)
 		}
 
-	case "NewBuffer":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
+	// case "NewBuffer":
+	// 	buffer_id, not_found, err :=
+	// 		anyutils.TraverseObjectTree002_string(
+	// 			msg_par,
+	// 			true,
+	// 			true,
+	// 			"buffer_id",
+	// 		)
 
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
+	// 	if not_found {
+	// 		err_input = errors.New("not found required parameter buffer_id")
+	// 		break
+	// 	}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+	// 	if err != nil {
+	// 		err_processing_internal = err
+	// 		break
+	// 	}
 
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
+	// 	buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+	// 	if err != nil {
+	// 		err_input = err
+	// 		break
+	// 	}
 
-		self.controller.NewBuffer(
-			buffer_id_uuid,
-		)
+	// self.controller.NewBuffer(
+	// 	buffer_id_uuid,
+	// )
 
 	case "BufferUpdated":
 		buffer_id, not_found, err :=
@@ -1368,11 +1462,11 @@ func (self *ARPCNode) PushMessageFromOutside(
 			err_processing_internal,
 		)
 		if err_processing_internal != nil {
-			return nil, nil, err_processing_internal
+			return nil, err_processing_internal
 		}
 	}
 
-	return err_input, err_processing_not_internal, err_processing_internal
+	return err_input, err_processing_internal
 }
 
 // note: err_code used only if err_reply and/or err != nil.
