@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AnimusPEXUS/gojsonrpc2"
 	"github.com/AnimusPEXUS/golockerreentrancycontext"
 	"github.com/AnimusPEXUS/gouuidtools"
 
@@ -510,6 +511,10 @@ func (self *ARPCNodeCtlBasic) saveCall(
 	)
 
 	return nil
+}
+
+func (self *ARPCNodeCtlBasic) SimpleRequest(msg *gojsonrpc2.Message) (error, error) {
+	return nil, nil
 }
 
 func (self *ARPCNodeCtlBasic) SocketGetConn(

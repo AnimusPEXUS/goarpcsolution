@@ -10,10 +10,10 @@ import (
 
 type ARPCNodeCtlI interface {
 
-	// this is just like same named cb in node of gojsonrpc2, with exception:
-	// to get here, message should be sent with "s:"
+	// this is just like OnRequestCB on JSONRPC2Node, with exception:
+	// to get here, (on jsonrpc2 level) message should be sent with "s:"
 	// prefix in method name. but this msg.Method will be with "s:" removed.
-	OnRequestCB(msg *gojsonrpc2.Message) (error, error)
+	SimpleRequest(msg *gojsonrpc2.Message) (error, error)
 
 	// get local representation of remote connected socket
 	SocketGetConn(connected_socket_id *gouuidtools.UUID) (net.Conn, error)

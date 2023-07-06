@@ -37,7 +37,7 @@ func NewARPCNode(
 
 	self.jrpc_node.OnRequestCB =
 		func(msg *gojsonrpc2.Message) (error, error) {
-			return self.handleJRPCMessage(msg)
+			return self.handleJRPCNodeMessage(msg)
 		}
 
 	return self
@@ -157,7 +157,7 @@ func (self *ARPCNode) PushMessageFromOutside(data []byte) (error, error) {
 func (self *ARPCNode) handleMessage_jrpc2(
 	msg *gojsonrpc2.Message,
 ) (error, error) {
-	return self.controller.OnRequestCB(msg)
+	return self.controller.SimpleRequest(msg)
 }
 
 // this function handles actual response to peer node by it self.
@@ -363,34 +363,34 @@ func (self *ARPCNode) handleJRPCNodeMessage(
 			tarnsmission_id_uuid,
 		)
 
-	case "NewSocket":
-		port_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"port_id",
-			)
+	// case "NewSocket":
+	// 	port_id, not_found, err :=
+	// 		anyutils.TraverseObjectTree002_string(
+	// 			msg_par,
+	// 			true,
+	// 			true,
+	// 			"port_id",
+	// 		)
 
-		if not_found {
-			err_input = errors.New("not found required parameter port_id")
-			break
-		}
+	// 	if not_found {
+	// 		err_input = errors.New("not found required parameter port_id")
+	// 		break
+	// 	}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+	// 	if err != nil {
+	// 		err_processing_internal = err
+	// 		break
+	// 	}
 
-		port_id_uuid, err := gouuidtools.NewUUIDFromString(port_id)
-		if err != nil {
-			err_input = err
-			break
-		}
+	// 	port_id_uuid, err := gouuidtools.NewUUIDFromString(port_id)
+	// 	if err != nil {
+	// 		err_input = err
+	// 		break
+	// 	}
 
-		self.controller.NewSocket(
-			port_id_uuid,
-		)
+	// 	self.controller.NewSocket(
+	// 		port_id_uuid,
+	// 	)
 
 	// ------------ Methods ------------
 
@@ -1558,16 +1558,16 @@ func (self *ARPCNode) NewCall(
 	return self.jrpc_node.SendNotification(msg)
 }
 
-func (self *ARPCNode) NewBuffer(
-	buffer_id *gouuidtools.UUID,
-) error {
-	msg := new(gojsonrpc2.Message)
-	msg.Method = "NewBuffer"
+// func (self *ARPCNode) NewBuffer(
+// 	buffer_id *gouuidtools.UUID,
+// ) error {
+// 	msg := new(gojsonrpc2.Message)
+// 	msg.Method = "NewBuffer"
 
-	msg.Params = map[string]any{"buffer_id": buffer_id.Format()}
+// 	msg.Params = map[string]any{"buffer_id": buffer_id.Format()}
 
-	return self.jrpc_node.SendNotification(msg)
-}
+// 	return self.jrpc_node.SendNotification(msg)
+// }
 
 func (self *ARPCNode) BufferUpdated(
 	buffer_id *gouuidtools.UUID,
@@ -1593,18 +1593,18 @@ func (self *ARPCNode) NewTransmission(
 	return self.jrpc_node.SendNotification(msg)
 }
 
-func (self *ARPCNode) NewSocket(
-	listening_socket_id *gouuidtools.UUID,
-) error {
-	msg := new(gojsonrpc2.Message)
-	msg.Method = "NewSocket"
+// func (self *ARPCNode) NewSocket(
+// 	listening_socket_id *gouuidtools.UUID,
+// ) error {
+// 	msg := new(gojsonrpc2.Message)
+// 	msg.Method = "NewSocket"
 
-	msg.Params = map[string]any{
-		"listening_socket_id": listening_socket_id.Format(),
-	}
+// 	msg.Params = map[string]any{
+// 		"listening_socket_id": listening_socket_id.Format(),
+// 	}
 
-	return self.jrpc_node.SendNotification(msg)
-}
+// 	return self.jrpc_node.SendNotification(msg)
+// }
 
 // ----------------------------------------
 // Basic Calls
