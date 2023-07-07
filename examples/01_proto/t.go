@@ -3,17 +3,17 @@ package main
 import (
 	"fmt"
 
-	"github.com/AnimusPEXUS/gorpcsolution"
+	"github.com/AnimusPEXUS/goarpcsolution"
 )
 
 func main() {
 	proto := gorpcsolution.Protocol{
 		VersionString: "gorpcsolution protocol v0.0",
-		Functions: []gorpcsolution.ProtocolFunction{
-			gorpcsolution.ProtocolFunction{
+		Functions: []goarpcsolution.ProtocolFunction{
+			goarpcsolution.ProtocolFunction{
 				Name:       "getString",
-				Parameters: []gorpcsolution.ProtocolFunctionParameter{},
-				ResultType: gorpcsolution.PFRT_String,
+				Parameters: []goarpcsolution.ProtocolFunctionParameter{},
+				ResultType: gaorpcsolution.PFRT_String,
 			},
 		},
 	}
