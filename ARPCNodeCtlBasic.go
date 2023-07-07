@@ -22,8 +22,16 @@ const TTL_CONST_10MIN = time.Duration(time.Minute * 10)
 var _ ARPCNodeCtlI = &ARPCNodeCtlBasic{}
 
 type ARPCNodeCtlBasic struct {
+	// the resulting errors are returned to PushMessageFromOutsied caller.
+	//   error #0 - if protocol error
+	//   error #1 - error preventing normal error response
 	OnCallCB            func(call *ARPCCall) (error, error)
 	OnUnhandledResultCB func(result *ARPCCall)
+
+	// the resulting errors are returned to PushMessageFromOutsied caller.
+	//   error #0 - if protocol error
+	//   error #1 - error preventing normal error response
+	OnSimpleRequestCB func(msg *gojsonrpc2.Message) (error, error)
 
 	call_id_r             *gouuidtools.UUIDRegistry
 	buffer_id_r           *gouuidtools.UUIDRegistry
@@ -514,7 +522,10 @@ func (self *ARPCNodeCtlBasic) saveCall(
 }
 
 func (self *ARPCNodeCtlBasic) SimpleRequest(msg *gojsonrpc2.Message) (error, error) {
-	return nil, nil
+	if self.OnSimpleRequestCB == nil {
+		panic("programming error: self.OnSimpleRequestCB == nil")
+	}
+	return self.OnSimpleRequestCB(msg)
 }
 
 func (self *ARPCNodeCtlBasic) SocketGetConn(

@@ -64,6 +64,10 @@ func (self *ARPCNode) DebugPrintfln(format string, data ...any) {
 	)
 }
 
+func (self *ARPCNode) GetController() ARPCNodeCtlI {
+	return self.controller
+}
+
 func (self *ARPCNode) Close() {
 	if self.jrpc_node != nil {
 		self.jrpc_node.Close()

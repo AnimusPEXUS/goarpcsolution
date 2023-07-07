@@ -8,12 +8,63 @@ import (
 
 type ARPCCall struct {
 	Name      string
-	Args      []*ARPCCallArg
-	CallId    *gouuidtools.UUID
 	ReplyToId *gouuidtools.UUID
+
+	Args   []*ARPCCallArg
+	CallId *gouuidtools.UUID
 
 	ReplyErrCode uint
 	ReplyErrMsg  string
+}
+
+func NewARPCCallWithId(
+	Name string,
+	CallId *gouuidtools.UUID,
+	Args ...*ARPCCallArg,
+) (*ARPCCall, error) {
+	self := new(ARPCCall)
+	self.Name = Name
+	self.Args = Args
+	err := self.IsValidError()
+	if err != nil {
+		return nil, err
+	}
+	return self, nil
+}
+
+func NewARPCCall(
+	Name string,
+	Args ...*ARPCCallArg,
+) (*ARPCCall, error) {
+	return NewARPCCallWithId(Name, nil, Args...)
+}
+
+func NewARPCCallReplyWithCodeAndMsg(
+	ReplyToId *gouuidtools.UUID,
+
+	ReplyErrCode uint,
+	ReplyErrMsg string,
+
+	Args ...*ARPCCallArg,
+) (*ARPCCall, error) {
+	self := new(ARPCCall)
+	self.ReplyToId = ReplyToId
+	self.ReplyErrCode = ReplyErrCode
+	self.ReplyErrMsg = ReplyErrMsg
+	self.Args = Args
+	err := self.IsValidError()
+	if err != nil {
+		return nil, err
+	}
+	return self, nil
+}
+
+// code and msg defaults to 0 and ""
+func NewARPCCallReply(
+	ReplyToId *gouuidtools.UUID,
+	Args ...*ARPCCallArg,
+) (*ARPCCall, error) {
+	return NewARPCCallReplyWithCodeAndMsg(ReplyToId, 0, "", Args...)
 }
 
 func (self *ARPCCall) IsValidError() error {
