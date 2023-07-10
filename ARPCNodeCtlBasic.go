@@ -822,7 +822,7 @@ type ARPCNodeCtlBasicCallR struct {
 }
 
 func (self *ARPCNodeCtlBasicCallR) Deleted() {
-
+	// TODO: ?
 }
 
 type ARPCNodeCtlBasicBufferR struct {
@@ -836,7 +836,7 @@ type ARPCNodeCtlBasicBufferR struct {
 }
 
 func (self *ARPCNodeCtlBasicBufferR) Deleted() {
-
+	// TODO: ?
 }
 
 type ARPCNodeCtlBasicTransmissionR struct {
@@ -850,7 +850,7 @@ type ARPCNodeCtlBasicTransmissionR struct {
 }
 
 func (self *ARPCNodeCtlBasicTransmissionR) Deleted() {
-
+	// TODO: ?
 }
 
 type ARPCNodeCtlBasicListeningSocketR struct {
@@ -864,7 +864,7 @@ type ARPCNodeCtlBasicListeningSocketR struct {
 }
 
 func (self *ARPCNodeCtlBasicListeningSocketR) Deleted() {
-
+	// TODO: ?
 }
 
 type ARPCNodeCtlBasicConnectedSocketR struct {
@@ -891,4 +891,30 @@ type ARPCNodeCtlBasicCallResHandler struct {
 	OnTimeout  func()
 	OnClose    func()
 	OnResponse func(args *ARPCCall)
+}
+
+func NewChannelledARPCNodeCtlBasicRespHandler() (
+	timedout <-chan struct{},
+	closed <-chan struct{},
+	call <-chan *ARPCCall,
+	rh *ARPCNodeCtlBasicCallResHandler,
+) {
+	var (
+		ret_timedout chan struct{}
+		ret_closed   chan struct{}
+		ret_call     chan *ARPCCall
+	)
+
+	ret := &ARPCNodeCtlBasicCallResHandler{
+		OnTimeout: func() {
+			ret_timedout <- struct{}{}
+		},
+		OnClose: func() {
+			ret_closed <- struct{}{}
+		},
+		OnResponse: func(call *ARPCCall) {
+			ret_call <- call
+		},
+	}
+	return ret_timedout, ret_closed, ret_call, ret
 }

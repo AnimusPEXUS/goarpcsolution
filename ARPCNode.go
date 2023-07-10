@@ -154,6 +154,8 @@ func (self *ARPCNode) SendError(msg *gojsonrpc2.Message) error {
 // handle incomming messages
 // ----------------------------------------
 
+// #0 protocol violation - not critical for server running,
+// #1 error - should be treated as server errors
 func (self *ARPCNode) PushMessageFromOutside(data []byte) (error, error) {
 	return self.jrpc_node.PushMessageFromOutside(data)
 }
