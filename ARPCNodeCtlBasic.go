@@ -73,6 +73,46 @@ func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 	self.listening_sockets_mtx = &sync.Mutex{}
 	self.connected_sockets_mtx = &sync.Mutex{}
 
+	{
+		r, err := gouuidtools.NewUUIDRegistry()
+		if err != nil {
+			panic("can't create UUID registry")
+		}
+		self.call_id_r = r
+	}
+
+	{
+		r, err := gouuidtools.NewUUIDRegistry()
+		if err != nil {
+			panic("can't create UUID registry")
+		}
+		self.buffer_id_r = r
+	}
+
+	{
+		r, err := gouuidtools.NewUUIDRegistry()
+		if err != nil {
+			panic("can't create UUID registry")
+		}
+		self.transmission_id_r = r
+	}
+
+	{
+		r, err := gouuidtools.NewUUIDRegistry()
+		if err != nil {
+			panic("can't create UUID registry")
+		}
+		self.listening_socket_id_r = r
+	}
+
+	{
+		r, err := gouuidtools.NewUUIDRegistry()
+		if err != nil {
+			panic("can't create UUID registry")
+		}
+		self.connected_sockets = r
+	}
+
 	self.wrkr01 = worker.New(self.worker01)
 	return self
 }
