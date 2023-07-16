@@ -110,7 +110,7 @@ func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 		if err != nil {
 			panic("can't create UUID registry")
 		}
-		self.connected_sockets = r
+		self.connected_socket_id_r = r
 	}
 
 	self.wrkr01 = worker.New(self.worker01)
