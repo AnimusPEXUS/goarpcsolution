@@ -1,6 +1,6 @@
 module github.com/AnimusPEXUS/goarpcsolution
 
-go 1.19
+go 1.20
 
 require (
 	github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230620070415-7a2b86fd4804
