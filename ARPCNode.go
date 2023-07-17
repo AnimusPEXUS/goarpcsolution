@@ -34,6 +34,7 @@ func NewARPCNode(
 	self := new(ARPCNode)
 	self.debugName = "ARPCNode"
 	self.controller = controller
+	self.controller.SetNode(self)
 
 	self.jrpc_node = gojsonrpc2.NewJSONRPC2Node()
 

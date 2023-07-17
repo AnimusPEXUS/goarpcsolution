@@ -10,6 +10,10 @@ import (
 
 type ARPCNodeCtlI interface {
 
+	// node will call this func on node init and
+	// pass pointer to self to controller
+	SetNode(node *ARPCNode)
+
 	// this is just like OnRequestCB on JSONRPC2Node, with exception:
 	// to get here, (on jsonrpc2 level) message should be sent with "s:"
 	// prefix in method name. but this msg.Method will be with "s:" removed.
