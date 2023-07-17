@@ -258,7 +258,10 @@ func (self *ARPCNodeCtlBasic) deleteBufferR_lrc(
 
 	for i := len(self.buffers) - 1; i != -1; i-- {
 		if self.buffers[i] == obj {
-			self.buffers = append(self.buffers[:i], self.buffers[i+1:]...)
+			self.buffers = append(
+				self.buffers[:i],
+				self.buffers[i+1:]...,
+			)
 		}
 	}
 }
