@@ -9,9 +9,10 @@ import (
 
 	"github.com/AnimusPEXUS/gojsonrpc2"
 	"github.com/AnimusPEXUS/golockerreentrancycontext"
+	"github.com/AnimusPEXUS/gorecursionguard"
 	"github.com/AnimusPEXUS/gouuidtools"
 
-	"github.com/AnimusPEXUS/utils/worker"
+	"github.com/AnimusPEXUS/goworker"
 )
 
 // todo: find better place for this.
@@ -54,18 +55,25 @@ type ARPCNodeCtlBasic struct {
 	handlers_mtx *sync.Mutex
 	handlers     []*xARPCNodeCtlBasicCallResHandlerWrapper
 
-	wrkr01 *worker.Worker
+	wrkr01 *goworker.Worker
 
 	stop_flag bool
 
 	node *ARPCNode
 
 	debugName string
+
+	closeRecursionGuard *gorecursionguard.RecursionGuard
 }
 
 func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 	self := new(ARPCNodeCtlBasic)
 	self.debugName = "ARPCNodeCtlBasic"
+
+	self.closeRecursionGuard = gorecursionguard.NewRecursionGuard(
+		gorecursionguard.RGM_SilentReturn,
+		nil,
+	)
 
 	self.calls_mtx = &sync.Mutex{}
 	self.buffers_mtx = &sync.Mutex{}
@@ -113,7 +121,7 @@ func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 		self.connected_socket_id_r = r
 	}
 
-	self.wrkr01 = worker.New(self.worker01)
+	self.wrkr01 = goworker.New(self.worker01)
 	return self
 }
 
@@ -135,6 +143,18 @@ func (self *ARPCNodeCtlBasic) DebugPrintln(data ...any) {
 
 func (self *ARPCNodeCtlBasic) DebugPrintfln(format string, data ...any) {
 	fmt.Println(append(append([]any{}, self.debugName), fmt.Sprintf(format, data...))...)
+}
+
+func (self *ARPCNodeCtlBasic) Close() {
+	self.closeRecursionGuard.Do(
+		func() {
+			self.stop_flag = true
+			if self.node != nil {
+				self.node.Close()
+				self.node = nil
+			}
+		},
+	)
 }
 
 const (
@@ -326,12 +346,8 @@ func (self *ARPCNodeCtlBasic) Call(
 	args []*ARPCCallArg,
 
 	unhandled bool,
-	rh *ARPCNodeCtlBasicCallResHandler,
-	response_timeout time.Duration,
-	// note: not sure if this is needed here. but it's possible
-	//       should be used to retreive call_id before actual
-	//       call is done
-	// request_id_hook *ARPCNodeCtlBasicNewCallIdHook,
+	rh *ARPCNodeCtlBasicCallResHandler, // TODO: ?
+	response_timeout time.Duration, // TODO: ?
 ) (ret_any *gouuidtools.UUID, ret_err error) {
 
 	call_id, err := self.call_id_r.GenUUID()

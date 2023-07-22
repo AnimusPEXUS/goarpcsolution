@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AnimusPEXUS/gojsonrpc2"
+	"github.com/AnimusPEXUS/gorecursionguard"
 	"github.com/AnimusPEXUS/gouuidtools"
 	"github.com/AnimusPEXUS/utils/anyutils"
 	"github.com/mitchellh/mapstructure"
@@ -23,15 +24,23 @@ type ARPCNode struct {
 
 	jrpc_node *gojsonrpc2.JSONRPC2Node
 
+	debugName string
+
 	stop_flag bool
 
-	debugName string
+	closeRecursionGuard *gorecursionguard.RecursionGuard
 }
 
 func NewARPCNode(
 	controller ARPCNodeCtlI,
 ) *ARPCNode {
 	self := new(ARPCNode)
+
+	self.closeRecursionGuard = gorecursionguard.NewRecursionGuard(
+		gorecursionguard.RGM_SilentReturn,
+		nil,
+	)
+
 	self.debugName = "ARPCNode"
 	self.controller = controller
 	self.controller.SetNode(self)
@@ -67,9 +76,9 @@ func (self *ARPCNode) DebugPrintfln(format string, data ...any) {
 	)
 }
 
-func (self *ARPCNode) nodeClosedProtection() {
-	if self.stop_flag {
-		panic("node closed")
+func (self *ARPCNode) nodeInvalidStateException() {
+	if self.stop_flag || self.controller == nil || self.controller.IsStopFlag() {
+		panic("node is in invalid state")
 	}
 }
 
@@ -77,12 +86,32 @@ func (self *ARPCNode) GetController() ARPCNodeCtlI {
 	return self.controller
 }
 
+func (self *ARPCNode) IsStopFlag() bool {
+	return self.stop_flag
+}
+
+// if controller is set - calls it's Close();
+// if jrpc2 node is set - calls it's Close();
+// sets this node into invalid state.
+// node can't be reused after Close() and should be replaced.
 func (self *ARPCNode) Close() {
-	self.stop_flag = true
-	if self.jrpc_node != nil {
-		self.jrpc_node.Close()
-		self.jrpc_node = nil
-	}
+	self.closeRecursionGuard.Do(
+		func() {
+
+			self.stop_flag = true
+
+			if self.controller != nil {
+				self.controller.Close()
+				self.controller = nil
+			}
+
+			if self.jrpc_node != nil {
+				self.jrpc_node.Close()
+				self.jrpc_node = nil
+			}
+		},
+	)
+
 }
 
 // ============ vvvvvvvvvvvvvvvvvvvv ============
@@ -96,7 +125,7 @@ func (self *ARPCNode) Close() {
 //
 //	validity
 func (self *ARPCNode) SendMessage(msg *gojsonrpc2.Message) error {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg.Method = "s:" + msg.Method
 	return self.jrpc_node.SendMessage(msg)
 }
@@ -111,7 +140,7 @@ func (self *ARPCNode) SendRequest(
 	response_timeout time.Duration,
 	request_id_hook *gojsonrpc2.JSONRPC2NodeNewRequestIdHook,
 ) (ret_any any, ret_err error) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	err := msg.IsInvalidError()
 	if err != nil {
 		return nil, err
@@ -127,7 +156,7 @@ func (self *ARPCNode) SendRequest(
 // note: this function always adds "s:" prefix to msg.Method
 // note: error if msg invalid
 func (self *ARPCNode) SendNotification(msg *gojsonrpc2.Message) error {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	err := msg.IsInvalidError()
 	if err != nil {
 		return err
@@ -139,7 +168,7 @@ func (self *ARPCNode) SendNotification(msg *gojsonrpc2.Message) error {
 }
 
 func (self *ARPCNode) SendResponse(msg *gojsonrpc2.Message) error {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	err := msg.IsInvalidError()
 	if err != nil {
 		return err
@@ -152,7 +181,7 @@ func (self *ARPCNode) SendResponse(msg *gojsonrpc2.Message) error {
 }
 
 func (self *ARPCNode) SendError(msg *gojsonrpc2.Message) error {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	err := msg.IsInvalidError()
 	if err != nil {
 		return err
@@ -172,7 +201,7 @@ func (self *ARPCNode) SendError(msg *gojsonrpc2.Message) error {
 // #0 protocol violation - not critical for server running,
 // #1 error - should be treated as server errors
 func (self *ARPCNode) PushMessageFromOutside(data []byte) (error, error) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	return self.jrpc_node.PushMessageFromOutside(data)
 }
 
@@ -1566,7 +1595,7 @@ func (self *ARPCNode) NewCall(
 	call_id *gouuidtools.UUID,
 	response_on *gouuidtools.UUID,
 ) error {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "NewCall"
 
@@ -1595,7 +1624,7 @@ func (self *ARPCNode) NewCall(
 func (self *ARPCNode) BufferUpdated(
 	buffer_id *gouuidtools.UUID,
 ) error {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferUpdated"
 
@@ -1607,7 +1636,7 @@ func (self *ARPCNode) BufferUpdated(
 func (self *ARPCNode) NewTransmission(
 	tarnsmission_id *gouuidtools.UUID,
 ) error {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "NewTransmission"
 
@@ -1678,7 +1707,7 @@ func (self *ARPCNode) CallGetList(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "CallGetList"
 
@@ -1730,7 +1759,7 @@ func (self *ARPCNode) CallGetInfo(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "CallGetInfo"
 	msg.Params = map[string]any{"call_id": call_id.Format()}
@@ -1776,7 +1805,7 @@ func (self *ARPCNode) CallGetArgCount(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "CallGetArgCount"
 	msg.Params = map[string]any{"call_id": call_id.Format()}
@@ -1824,7 +1853,7 @@ func (self *ARPCNode) CallGetArgValues(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "CallGetArgValue"
 	msg.Params = map[string]any{
@@ -1875,7 +1904,7 @@ func (self *ARPCNode) CallClose(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "CallClose"
 	msg.Params = map[string]any{
@@ -1921,7 +1950,7 @@ func (self *ARPCNode) BufferGetInfo(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetInfo"
 	msg.Params = map[string]any{
@@ -1971,7 +2000,7 @@ func (self *ARPCNode) BufferGetItemsCount(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetItemsCount"
 	msg.Params = map[string]any{
@@ -2023,7 +2052,7 @@ func (self *ARPCNode) BufferGetItemsIds(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetItemsIds"
 	msg.Params = map[string]any{
@@ -2073,7 +2102,7 @@ func (self *ARPCNode) BufferGetItemsByIds(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetItemsByIds"
 	msg.Params = map[string]any{
@@ -2134,7 +2163,7 @@ func (self *ARPCNode) BufferGetItemsFirstTime(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetItemsFirstTime"
 	msg.Params = map[string]any{
@@ -2189,7 +2218,7 @@ func (self *ARPCNode) BufferGetItemsLastTime(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetItemsIds"
 	msg.Params = map[string]any{
@@ -2242,7 +2271,7 @@ func (self *ARPCNode) BufferSubscribeOnUpdatesNotification(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferSubscribeOnUpdatesNotification"
 	msg.Params = map[string]any{
@@ -2283,7 +2312,7 @@ func (self *ARPCNode) BufferUnsubscribeFromUpdatesNotification(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferUnsubscribeFromUpdatesNotification"
 	msg.Params = map[string]any{
@@ -2325,7 +2354,7 @@ func (self *ARPCNode) BufferGetIsSubscribedOnUpdatesNotification(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetIsSubscribedOnUpdatesNotification"
 	msg.Params = map[string]any{
@@ -2372,7 +2401,7 @@ func (self *ARPCNode) BufferGetListSubscribedUpdatesNotifications(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferGetListSubscribedUpdatesNotifications"
 
@@ -2423,7 +2452,7 @@ func (self *ARPCNode) BufferBinaryGetSize(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferBinaryGetSize"
 	msg.Params = map[string]any{
@@ -2472,7 +2501,7 @@ func (self *ARPCNode) BufferBinaryGetSlice(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "BufferBinaryGetSlice"
 	msg.Params = map[string]any{
@@ -2520,7 +2549,7 @@ func (self *ARPCNode) TransmissionGetList(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "TransmissionGetList"
 
@@ -2571,7 +2600,7 @@ func (self *ARPCNode) TransmissionGetInfo(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "TransmissionGetInfo"
 	msg.Params = map[string]any{
@@ -2624,7 +2653,7 @@ func (self *ARPCNode) SocketGetList(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "SocketGetList"
 
@@ -2675,7 +2704,7 @@ func (self *ARPCNode) SocketOpen(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "SocketOpen"
 	msg.Params = map[string]any{
@@ -2730,7 +2759,7 @@ func (self *ARPCNode) SocketRead(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "SocketRead"
 	msg.Params = map[string]any{
@@ -2781,7 +2810,7 @@ func (self *ARPCNode) SocketWrite(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "SocketWrite"
 	msg.Params = map[string]any{
@@ -2830,7 +2859,7 @@ func (self *ARPCNode) SocketClose(
 	result_err error,
 	err error,
 ) {
-	self.nodeClosedProtection()
+	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
 	msg.Method = "CallClose"
 	msg.Params = map[string]any{
