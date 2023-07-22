@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/AnimusPEXUS/gojsonrpc2"
-	"github.com/AnimusPEXUS/golockerreentrancycontext"
 	"github.com/AnimusPEXUS/gorecursionguard"
+	"github.com/AnimusPEXUS/goreentrantlock"
 	"github.com/AnimusPEXUS/gouuidtools"
 
 	"github.com/AnimusPEXUS/goworker"
@@ -40,11 +40,11 @@ type ARPCNodeCtlBasic struct {
 	listening_socket_id_r *gouuidtools.UUIDRegistry
 	connected_socket_id_r *gouuidtools.UUIDRegistry
 
-	calls_mtx             *sync.Mutex
-	buffers_mtx           *sync.Mutex
-	transmissions_mtx     *sync.Mutex
-	listening_sockets_mtx *sync.Mutex
-	connected_sockets_mtx *sync.Mutex
+	calls_mtx             *goreentrantlock.ReentrantMutexCheckable
+	buffers_mtx           *goreentrantlock.ReentrantMutexCheckable
+	transmissions_mtx     *goreentrantlock.ReentrantMutexCheckable
+	listening_sockets_mtx *goreentrantlock.ReentrantMutexCheckable
+	connected_sockets_mtx *goreentrantlock.ReentrantMutexCheckable
 
 	calls             []*ARPCNodeCtlBasicCallR
 	buffers           []*ARPCNodeCtlBasicBufferR
@@ -75,11 +75,11 @@ func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 		nil,
 	)
 
-	self.calls_mtx = &sync.Mutex{}
-	self.buffers_mtx = &sync.Mutex{}
-	self.transmissions_mtx = &sync.Mutex{}
-	self.listening_sockets_mtx = &sync.Mutex{}
-	self.connected_sockets_mtx = &sync.Mutex{}
+	self.calls_mtx = goreentrantlock.NewReentrantMutexCheckable(false)
+	self.buffers_mtx = goreentrantlock.NewReentrantMutexCheckable(false)
+	self.transmissions_mtx = goreentrantlock.NewReentrantMutexCheckable(false)
+	self.listening_sockets_mtx = goreentrantlock.NewReentrantMutexCheckable(false)
+	self.connected_sockets_mtx = goreentrantlock.NewReentrantMutexCheckable(false)
 
 	{
 		r, err := gouuidtools.NewUUIDRegistry()
@@ -170,28 +170,26 @@ func (self *ARPCNodeCtlBasic) worker01(
 	is_stop_flag func() bool,
 ) {
 
-	lrc := new(golockerreentrancycontext.LockerReentrancyContext)
-
 	set_starting()
 	defer func() {
 		for _, i := range self.calls[:] {
-			self.deleteCallR_lrc(i, lrc)
+			self.deleteCallR_lrc(i)
 		}
 
 		for _, i := range self.buffers[:] {
-			self.deleteBufferR_lrc(i, lrc)
+			self.deleteBufferR_lrc(i)
 		}
 
 		for _, i := range self.transmissions[:] {
-			self.deleteTransmissionR_lrc(i, lrc)
+			self.deleteTransmissionR_lrc(i)
 		}
 
 		for _, i := range self.listening_sockets[:] {
-			self.deleteListeningSocketR_lrc(i, lrc)
+			self.deleteListeningSocketR_lrc(i)
 		}
 
 		for _, i := range self.connected_sockets[:] {
-			self.deleteConnectedSocketR_lrc(i, lrc)
+			self.deleteConnectedSocketR_lrc(i)
 		}
 
 		set_stopped()
@@ -209,7 +207,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.calls[:] {
 				if x.TTL <= 0 {
-					self.deleteCallR_lrc(x, lrc)
+					self.deleteCallR_lrc(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -217,7 +215,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.buffers[:] {
 				if x.TTL <= 0 {
-					self.deleteBufferR_lrc(x, lrc)
+					self.deleteBufferR_lrc(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -225,7 +223,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.transmissions[:] {
 				if x.TTL <= 0 {
-					self.deleteTransmissionR_lrc(x, lrc)
+					self.deleteTransmissionR_lrc(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -233,7 +231,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.listening_sockets[:] {
 				if x.TTL <= 0 {
-					self.deleteListeningSocketR_lrc(x, lrc)
+					self.deleteListeningSocketR_lrc(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -241,7 +239,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.connected_sockets[:] {
 				if x.TTL <= 0 {
-					self.deleteConnectedSocketR_lrc(x, lrc)
+					self.deleteConnectedSocketR_lrc(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -257,10 +255,9 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 func (self *ARPCNodeCtlBasic) deleteCallR_lrc(
 	obj *ARPCNodeCtlBasicCallR,
-	lrc *golockerreentrancycontext.LockerReentrancyContext,
 ) {
-	lrc.LockMutex(self.calls_mtx)
-	defer lrc.UnlockMutex(self.calls_mtx)
+	self.calls_mtx.Lock()
+	defer self.calls_mtx.Unlock()
 
 	for i := len(self.calls) - 1; i != -1; i-- {
 		if self.calls[i] == obj {
@@ -271,10 +268,9 @@ func (self *ARPCNodeCtlBasic) deleteCallR_lrc(
 
 func (self *ARPCNodeCtlBasic) deleteBufferR_lrc(
 	obj *ARPCNodeCtlBasicBufferR,
-	lrc *golockerreentrancycontext.LockerReentrancyContext,
 ) {
-	lrc.LockMutex(self.buffers_mtx)
-	defer lrc.UnlockMutex(self.buffers_mtx)
+	self.buffers_mtx.Lock()
+	defer self.buffers_mtx.Unlock()
 
 	for i := len(self.buffers) - 1; i != -1; i-- {
 		if self.buffers[i] == obj {
@@ -288,10 +284,9 @@ func (self *ARPCNodeCtlBasic) deleteBufferR_lrc(
 
 func (self *ARPCNodeCtlBasic) deleteTransmissionR_lrc(
 	obj *ARPCNodeCtlBasicTransmissionR,
-	lrc *golockerreentrancycontext.LockerReentrancyContext,
 ) {
-	lrc.LockMutex(self.transmissions_mtx)
-	defer lrc.UnlockMutex(self.transmissions_mtx)
+	self.transmissions_mtx.Lock()
+	defer self.transmissions_mtx.Unlock()
 
 	for i := len(self.transmissions) - 1; i != -1; i-- {
 		if self.transmissions[i] == obj {
@@ -305,10 +300,9 @@ func (self *ARPCNodeCtlBasic) deleteTransmissionR_lrc(
 
 func (self *ARPCNodeCtlBasic) deleteListeningSocketR_lrc(
 	obj *ARPCNodeCtlBasicListeningSocketR,
-	lrc *golockerreentrancycontext.LockerReentrancyContext,
 ) {
-	lrc.LockMutex(self.listening_sockets_mtx)
-	defer lrc.UnlockMutex(self.listening_sockets_mtx)
+	self.listening_sockets_mtx.Lock()
+	defer self.listening_sockets_mtx.Unlock()
 
 	for i := len(self.listening_sockets) - 1; i != -1; i-- {
 		if self.listening_sockets[i] == obj {
@@ -322,10 +316,10 @@ func (self *ARPCNodeCtlBasic) deleteListeningSocketR_lrc(
 
 func (self *ARPCNodeCtlBasic) deleteConnectedSocketR_lrc(
 	obj *ARPCNodeCtlBasicConnectedSocketR,
-	lrc *golockerreentrancycontext.LockerReentrancyContext,
+
 ) {
-	lrc.LockMutex(self.connected_sockets_mtx)
-	defer lrc.UnlockMutex(self.connected_sockets_mtx)
+	self.connected_sockets_mtx.Lock()
+	defer self.connected_sockets_mtx.Unlock()
 
 	for i := len(self.connected_sockets) - 1; i != -1; i-- {
 		if self.connected_sockets[i] == obj {
@@ -423,8 +417,6 @@ func (self *ARPCNodeCtlBasic) saveCall(
 
 	ttl time.Duration,
 ) error {
-
-	lrc := new(golockerreentrancycontext.LockerReentrancyContext)
 
 	if (name != "" && reply_to_id != nil) ||
 		(name == "" && reply_to_id == nil) {
@@ -543,20 +535,20 @@ func (self *ARPCNodeCtlBasic) saveCall(
 		TTL:       TTL_CONST_10MIN,
 	}
 
-	lrc.LockMutex(self.calls_mtx)
-	defer lrc.UnlockMutex(self.calls_mtx)
+	self.calls_mtx.Lock()
+	defer self.calls_mtx.Unlock()
 
-	lrc.LockMutex(self.buffers_mtx)
-	defer lrc.UnlockMutex(self.buffers_mtx)
+	self.buffers_mtx.Lock()
+	defer self.buffers_mtx.Unlock()
 
-	lrc.LockMutex(self.transmissions_mtx)
-	defer lrc.UnlockMutex(self.transmissions_mtx)
+	self.transmissions_mtx.Lock()
+	defer self.transmissions_mtx.Unlock()
 
-	lrc.LockMutex(self.listening_sockets_mtx)
-	defer lrc.UnlockMutex(self.listening_sockets_mtx)
+	self.listening_sockets_mtx.Lock()
+	defer self.listening_sockets_mtx.Unlock()
 
-	lrc.LockMutex(self.connected_sockets_mtx)
-	defer lrc.UnlockMutex(self.connected_sockets_mtx)
+	self.connected_sockets_mtx.Lock()
+	defer self.connected_sockets_mtx.Unlock()
 
 	self.calls = append(self.calls, call)
 
