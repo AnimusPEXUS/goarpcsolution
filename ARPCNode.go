@@ -77,7 +77,7 @@ func (self *ARPCNode) DebugPrintfln(format string, data ...any) {
 }
 
 func (self *ARPCNode) nodeInvalidStateException() {
-	if self.stop_flag || self.controller == nil || self.controller.IsStopFlag() {
+	if self.stop_flag || self.controller == nil {
 		panic("node is in invalid state")
 	}
 }
@@ -86,9 +86,9 @@ func (self *ARPCNode) GetController() ARPCNodeCtlI {
 	return self.controller
 }
 
-func (self *ARPCNode) IsStopFlag() bool {
-	return self.stop_flag
-}
+// func (self *ARPCNode) IsStopFlag() bool {
+// 	return self.stop_flag
+// }
 
 // if controller is set - calls it's Close();
 // if jrpc2 node is set - calls it's Close();

@@ -14,11 +14,6 @@ type ARPCNodeCtlI interface {
 	// pass pointer to self to controller
 	SetNode(node *ARPCNode)
 
-	// return true if node can't be used. if true, some Node
-	// functions will panic on attemt to call them.
-	// this is feature for developers.
-	IsStopFlag() bool
-
 	// this is just like OnRequestCB on JSONRPC2Node, with exception:
 	// to get here, (on jsonrpc2 level) message should be sent with "s:"
 	// prefix in method name. but this msg.Method will be with "s:" removed.
