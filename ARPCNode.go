@@ -13,6 +13,14 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+const ARPC_MSG_PREFIX_SIMPLE = "simple"
+const ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN = ARPC_MSG_PREFIX_SIMPLE + ":"
+const ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN_LEN = len(ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN)
+
+const ARPC_MSG_PREFIX_ARPC = "arpc"
+const ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN = ARPC_MSG_PREFIX_ARPC + ":"
+const ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN_LEN = len(ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN)
+
 // var _ ARPCSolutionCtlI = &ARPCNode{}
 
 // some functions inherited from ARPCSolutionCtlI.
@@ -132,7 +140,7 @@ func (self *ARPCNode) Close() {
 //	validity
 func (self *ARPCNode) SendMessage(msg *gojsonrpc2.Message) error {
 	self.nodeInvalidStateException()
-	msg.Method = "s:" + msg.Method
+	msg.Method = ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN + msg.Method
 	return self.jrpc_node.SendMessage(msg)
 }
 
@@ -152,7 +160,7 @@ func (self *ARPCNode) SendRequest(
 		return nil, err
 	}
 	if msg.Method != "" {
-		msg.Method = "s:" + msg.Method
+		msg.Method = ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN + msg.Method
 	}
 	return self.jrpc_node.SendRequest(
 		msg, genid, unhandled, rh, response_timeout, request_id_hook,
@@ -168,7 +176,7 @@ func (self *ARPCNode) SendNotification(msg *gojsonrpc2.Message) error {
 		return err
 	}
 	if msg.Method != "" {
-		msg.Method = "s:" + msg.Method
+		msg.Method = ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN + msg.Method
 	}
 	return self.jrpc_node.SendNotification(msg)
 }
@@ -179,9 +187,7 @@ func (self *ARPCNode) SendResponse(msg *gojsonrpc2.Message) error {
 	if err != nil {
 		return err
 	}
-	// if msg.Method != "" {
-	// 	msg.Method = "s:" + msg.Method
-	// }
+
 	return self.jrpc_node.SendResponse(msg)
 
 }
@@ -192,9 +198,7 @@ func (self *ARPCNode) SendError(msg *gojsonrpc2.Message) error {
 	if err != nil {
 		return err
 	}
-	// if msg.Method != "" {
-	// 	msg.Method = "s:" + msg.Method
-	// }
+
 	return self.jrpc_node.SendError(msg)
 }
 
@@ -211,11 +215,17 @@ func (self *ARPCNode) PushMessageFromOutside(data []byte) (error, error) {
 	return self.jrpc_node.PushMessageFromOutside(data)
 }
 
-func (self *ARPCNode) handleMessage_jrpc2(
+func (self *ARPCNode) handleMessage_simple(
 	msg *gojsonrpc2.Message,
 ) (error, error) {
 	return self.controller.SimpleRequest(msg)
 }
+
+// func (self *ARPCNode) handleMessage_arpc(
+// 	msg *gojsonrpc2.Message,
+// ) (error, error) {
+// 	return self.controller.SimpleRequest(msg)
+// }
 
 // this function handles actual response to peer node by it self.
 // results here are for internal use only.
@@ -229,1301 +239,1307 @@ func (self *ARPCNode) handleJRPCNodeMessage(
 		self.DebugPrintln("PushMessageFromOutside()")
 	}
 
-	msg_id, msg_has_id := msg.GetId()
-
 	if self.controller == nil {
 		// TODO: replace with panic?
 		return nil,
 			errors.New("handling controller undefined")
 	}
 
-	if strings.HasPrefix(msg.Method, "jrpc2:") {
-		msg.Method = msg.Method[6:]
-		return self.handleMessage_jrpc2(msg)
+	if strings.HasPrefix(msg.Method, ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN) {
+		msg.Method = msg.Method[ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN_LEN:]
+		return self.handleMessage_simple(msg)
 	}
 
-	var msg_par map[string]any
+	if strings.HasPrefix(msg.Method, ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN) {
+		msg.Method = msg.Method[ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN_LEN:]
 
-	msg_par, ok := (msg.Params).(map[string]any)
-	if !ok {
-		return errors.New("can't convert msg.Params to map[string]any"),
-			errors.New("protocol error")
-	}
+		msg_id, msg_has_id := msg.GetId()
 
-	var (
-		// err_proto error
-		result any = nil
+		var msg_par map[string]any
 
-		err_code int
-		// input error (protocol error) (this is notification. include into log only)
-		err_input error
-		// error (this is notification. include into log only)
-		err_processing_not_internal error
-		// error to report in server log
-		err_processing_internal error
-	)
-
-	// ------------ Notifications ------------
-
-	switch msg.Method {
-	default:
-		err_code = int(gojsonrpc2.ProtocolErrorMethodNotFound)
-		err_input = errors.New("invalid method name")
-		err_processing_not_internal = errors.New("protocol error")
-		err_processing_internal = errors.New("protocol error")
-
-	case "NewCall":
-		call_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"call_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter call_id")
-			break
+		msg_par, ok := (msg.Params).(map[string]any)
+		if !ok {
+			return errors.New("can't convert msg.Params to map[string]any"),
+				errors.New("protocol error")
 		}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+		var (
+			// err_proto error
+			result any = nil
 
-		call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
-		if err != nil {
-			err_input = err
-			break
-		}
+			err_code int
+			// input error (protocol error) (this is notification. include into log only)
+			err_input error
+			// error (this is notification. include into log only)
+			err_processing_not_internal error
+			// error to report in server log
+			err_processing_internal error
+		)
 
-		response_on, response_on_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"response_on",
-			)
-		if err != nil {
-			err_input = errors.New("possible problem with response_on field")
-			err_processing_internal = err
-			break
-		}
+		// ------------ Notifications ------------
 
-		var response_on_uuid *gouuidtools.UUID
-		if response_on_found {
-			response_on_uuid, err = gouuidtools.NewUUIDFromString(response_on)
+		switch msg.Method {
+		default:
+			err_code = int(gojsonrpc2.ProtocolErrorMethodNotFound)
+			err_input = errors.New("invalid method name")
+			err_processing_not_internal = errors.New("protocol error")
+			err_processing_internal = errors.New("protocol error")
+
+		case "NewCall":
+			call_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"call_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter call_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
 			if err != nil {
 				err_input = err
 				break
 			}
-		}
 
-		if !response_on_found {
-			go self.controller.NewCall(
-				call_id_uuid,
-				nil,
-			)
-		} else {
-			go self.controller.NewCall(
-				call_id_uuid,
-				response_on_uuid,
-			)
-		}
-
-	// case "NewBuffer":
-	// 	buffer_id, not_found, err :=
-	// 		anyutils.TraverseObjectTree002_string(
-	// 			msg_par,
-	// 			true,
-	// 			true,
-	// 			"buffer_id",
-	// 		)
-
-	// 	if not_found {
-	// 		err_input = errors.New("not found required parameter buffer_id")
-	// 		break
-	// 	}
-
-	// 	if err != nil {
-	// 		err_processing_internal = err
-	// 		break
-	// 	}
-
-	// 	buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-	// 	if err != nil {
-	// 		err_input = err
-	// 		break
-	// 	}
-
-	// self.controller.NewBuffer(
-	// 	buffer_id_uuid,
-	// )
-
-	case "BufferUpdated":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		self.controller.BufferUpdated(
-			buffer_id_uuid,
-		)
-
-	case "NewTransmission":
-		tarnsmission_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"tarnsmission_id",
-			)
-
-		if not_found {
-			err_input =
-				errors.New("not found required parameter tarnsmission_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		tarnsmission_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(tarnsmission_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		self.controller.NewTransmission(
-			tarnsmission_id_uuid,
-		)
-
-	// case "NewSocket":
-	// 	port_id, not_found, err :=
-	// 		anyutils.TraverseObjectTree002_string(
-	// 			msg_par,
-	// 			true,
-	// 			true,
-	// 			"port_id",
-	// 		)
-
-	// 	if not_found {
-	// 		err_input = errors.New("not found required parameter port_id")
-	// 		break
-	// 	}
-
-	// 	if err != nil {
-	// 		err_processing_internal = err
-	// 		break
-	// 	}
-
-	// 	port_id_uuid, err := gouuidtools.NewUUIDFromString(port_id)
-	// 	if err != nil {
-	// 		err_input = err
-	// 		break
-	// 	}
-
-	// 	self.controller.NewSocket(
-	// 		port_id_uuid,
-	// 	)
-
-	// ------------ Methods ------------
-
-	case "CallGetList":
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.CallGetList()
-
-	case "CallGetArgCount":
-		call_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"call_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter call_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.CallGetArgCount(
-				call_id_uuid,
-			)
-
-	case "CallGetArgValue":
-		call_id, not_found, err := anyutils.TraverseObjectTree002_string(
-			msg_par,
-			true,
-			true,
-			"call_id",
-		)
-
-		if not_found {
-			err_input = errors.New("not found required parameter call_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		first, not_found, err := anyutils.TraverseObjectTree002_int(
-			msg_par,
-			true,
-			true,
-			"first",
-		)
-
-		if not_found {
-			err_input = errors.New("not found required parameter 'first'")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		if first < 0 {
-			err_input = errors.New("first must be >= 0")
-			break
-		}
-
-		last, not_found, err := anyutils.TraverseObjectTree002_int(
-			msg_par,
-			true,
-			true,
-			"first",
-		)
-
-		if not_found {
-			err_input = errors.New("not found required parameter 'last'")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		if last < first {
-			err_input = errors.New("last must be >= first")
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.CallGetArgValues(
-				call_id_uuid,
-				first, last,
-			)
-
-	case "CallClose":
-		call_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"call_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter call_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		self.controller.CallClose(
-			call_id_uuid,
-		)
-
-	case "BufferGetInfo":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetInfo(
-				buffer_id_uuid,
-			)
-
-	case "BufferGetItemsCount":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetItemsCount(
-				buffer_id_uuid,
-			)
-
-	case "BufferGetItemsIds":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		// 1st spec
-
-		first_spec_str, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"first_spec",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter first_spec")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		first_spec, ty := NewARPCBufferItemSpecifierFromString(first_spec_str)
-		if ty == ARPCBufferItemSpecifierTypeInvalid {
-			err_input = errors.New("invalid value for first_spec")
-			break
-		}
-
-		// 2nd spec
-
-		last_spec_str, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"last_spec",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter last_spec")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		last_spec, ty := NewARPCBufferItemSpecifierFromString(last_spec_str)
-		if ty == ARPCBufferItemSpecifierTypeInvalid {
-			err_input = errors.New("invalid value for last_spec")
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetItemsIds(
-				buffer_id_uuid,
-				first_spec,
-				last_spec,
-			)
-
-	case "BufferGetItemsTimesByIds":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		ids, not_found, err :=
-			anyutils.TraverseObjectTree002_str_list(
-				msg_par,
-				true,
-				true,
-				"ids",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter ids")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetItemsTimesByIds(
-				buffer_id_uuid,
-				ids,
-			)
-
-	case "BufferGetItemsByIds":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		ids, not_found, err :=
-			anyutils.TraverseObjectTree002_str_list(
-				msg_par,
-				true,
-				true,
-				"ids",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter ids")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetItemsByIds(
-				buffer_id_uuid,
-				ids,
-			)
-
-	case "BufferGetItemsFirstTime":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetItemsFirstTime(
-				buffer_id_uuid,
-			)
-
-	case "BufferGetItemsLastTime":
-
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetItemsLastTime(
-				buffer_id_uuid,
-			)
-
-	case "BufferSubscribeOnUpdatesNotification":
-
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		err_processing_not_internal, err_processing_internal =
-			self.controller.BufferSubscribeOnUpdatesNotification(
-				buffer_id_uuid,
-			)
-
-		result = err_processing_not_internal == nil &&
-			err_processing_internal == nil
-
-	case "BufferUnsubscribeFromUpdatesNotification":
-
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		err_processing_not_internal, err_processing_internal =
-			self.controller.BufferUnsubscribeFromUpdatesNotification(
-				buffer_id_uuid,
-			)
-
-		result = err_processing_not_internal == nil &&
-			err_processing_internal == nil
-
-	case "BufferGetIsSubscribedOnUpdatesNotification":
-
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetIsSubscribedOnUpdatesNotification(
-				buffer_id_uuid,
-			)
-
-	case "BufferGetListSubscribedUpdatesNotifications":
-
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferGetIsSubscribedOnUpdatesNotification(
-				buffer_id_uuid,
-			)
-
-	case "BufferBinaryGetSize":
-
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferBinaryGetSize(
-				buffer_id_uuid,
-			)
-
-	case "BufferBinaryGetSlice":
-		buffer_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"buffer_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter buffer_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
-		if err != nil {
-			err_input = err
-		}
-
-		// 1st spec
-
-		start_index, not_found, err :=
-			anyutils.TraverseObjectTree002_int(
-				msg_par,
-				true,
-				true,
-				"start_index",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter first_spec")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		// 2nd spec
-
-		end_index, not_found, err :=
-			anyutils.TraverseObjectTree002_int(
-				msg_par,
-				true,
-				true,
-				"end_index",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter last_spec")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.BufferBinaryGetSlice(
-				buffer_id_uuid,
-				start_index,
-				end_index,
-			)
-
-	case "TransmissionGetList":
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.TransmissionGetList()
-
-	case "TransmissionGetInfo":
-		transmission_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"transmission_id",
-			)
-
-		if not_found {
-			err_input =
-				errors.New("not found required parameter transmission_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		transmission_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(transmission_id)
-		if err != nil {
-			err_input = err
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.TransmissionGetInfo(
-				transmission_id_uuid,
-			)
-
-	case "SocketGetList":
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.SocketGetList()
-
-	case "SocketOpen":
-		listening_socket_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"listening_socket_id",
-			)
-
-		if not_found {
-			err_input =
-				errors.New("not found required parameter listening_socket_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		listening_socket_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(listening_socket_id)
-		if err != nil {
-			err_input = err
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.SocketOpen(
-				listening_socket_id_uuid,
-			)
-
-	case "SocketRead":
-		connected_socket_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"connected_socket_id",
-			)
-
-		if not_found {
-			err_input =
-				errors.New("not found required parameter connected_socket_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		connected_socket_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(connected_socket_id)
-		if err != nil {
-			err_input = err
-		}
-
-		try_read_size, not_found, err := anyutils.TraverseObjectTree002_int(
-			msg_par,
-			true,
-			true,
-			"try_read_size",
-		)
-
-		if not_found {
-			err_input =
-				errors.New("not found required parameter try_read_size")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		if try_read_size < 0 {
-			err_input = errors.New("try_read_size must be >= 0")
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.SocketRead(
-				connected_socket_id_uuid,
-				try_read_size,
-			)
-
-	case "SocketWrite":
-
-		connected_socket_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"connected_socket_id",
-			)
-
-		if not_found {
-			err_input =
-				errors.New("not found required parameter connected_socket_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		connected_socket_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(connected_socket_id)
-		if err != nil {
-			err_input = err
-		}
-
-		b, not_found, err := anyutils.TraverseObjectTree002_byte_list(
-			msg_par,
-			true,
-			true,
-			"b",
-		)
-
-		if not_found {
-			err_input = errors.New("not found required parameter b")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		result, err_processing_not_internal, err_processing_internal =
-			self.controller.SocketWrite(
-				connected_socket_id_uuid,
-				b,
-			)
-
-	case "SocketClose":
-		connected_socket_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"connected_socket_id",
-			)
-
-		if not_found {
-			err_input = errors.New("not found required parameter connected_socket_id")
-			break
-		}
-
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		connected_socket_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(connected_socket_id)
-		if err != nil {
-			err_input = err
-		}
-
-		err_processing_not_internal, err_processing_internal =
-			self.controller.SocketClose(
-				connected_socket_id_uuid,
-			)
-
-		result = err_processing_not_internal == nil &&
-			err_processing_internal == nil
-
-	case "SocketSetDeadline":
-		connected_socket_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
-				msg_par,
-				true,
-				true,
-				"connected_socket_id",
-			)
-
-		if not_found {
-			err_input =
-				errors.New(
-					"not found required parameter connected_socket_id",
+			response_on, response_on_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"response_on",
 				)
-			break
-		}
+			if err != nil {
+				err_input = errors.New("possible problem with response_on field")
+				err_processing_internal = err
+				break
+			}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+			var response_on_uuid *gouuidtools.UUID
+			if response_on_found {
+				response_on_uuid, err = gouuidtools.NewUUIDFromString(response_on)
+				if err != nil {
+					err_input = err
+					break
+				}
+			}
 
-		connected_socket_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(connected_socket_id)
-		if err != nil {
-			err_input = err
-		}
+			if !response_on_found {
+				go self.controller.NewCall(
+					call_id_uuid,
+					nil,
+				)
+			} else {
+				go self.controller.NewCall(
+					call_id_uuid,
+					response_on_uuid,
+				)
+			}
 
-		t_str, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
+		// case "NewBuffer":
+		// 	buffer_id, not_found, err :=
+		// 		anyutils.TraverseObjectTree002_string(
+		// 			msg_par,
+		// 			true,
+		// 			true,
+		// 			"buffer_id",
+		// 		)
+
+		// 	if not_found {
+		// 		err_input = errors.New("not found required parameter buffer_id")
+		// 		break
+		// 	}
+
+		// 	if err != nil {
+		// 		err_processing_internal = err
+		// 		break
+		// 	}
+
+		// 	buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+		// 	if err != nil {
+		// 		err_input = err
+		// 		break
+		// 	}
+
+		// self.controller.NewBuffer(
+		// 	buffer_id_uuid,
+		// )
+
+		case "BufferUpdated":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			self.controller.BufferUpdated(
+				buffer_id_uuid,
+			)
+
+		case "NewTransmission":
+			tarnsmission_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"tarnsmission_id",
+				)
+
+			if not_found {
+				err_input =
+					errors.New("not found required parameter tarnsmission_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			tarnsmission_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(tarnsmission_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			self.controller.NewTransmission(
+				tarnsmission_id_uuid,
+			)
+
+		// case "NewSocket":
+		// 	port_id, not_found, err :=
+		// 		anyutils.TraverseObjectTree002_string(
+		// 			msg_par,
+		// 			true,
+		// 			true,
+		// 			"port_id",
+		// 		)
+
+		// 	if not_found {
+		// 		err_input = errors.New("not found required parameter port_id")
+		// 		break
+		// 	}
+
+		// 	if err != nil {
+		// 		err_processing_internal = err
+		// 		break
+		// 	}
+
+		// 	port_id_uuid, err := gouuidtools.NewUUIDFromString(port_id)
+		// 	if err != nil {
+		// 		err_input = err
+		// 		break
+		// 	}
+
+		// 	self.controller.NewSocket(
+		// 		port_id_uuid,
+		// 	)
+
+		// ------------ Methods ------------
+
+		case "CallGetList":
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.CallGetList()
+
+		case "CallGetArgCount":
+			call_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"call_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter call_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.CallGetArgCount(
+					call_id_uuid,
+				)
+
+		case "CallGetArgValue":
+			call_id, not_found, err := anyutils.TraverseObjectTree002_string(
 				msg_par,
 				true,
 				true,
-				"t",
+				"call_id",
 			)
 
-		if not_found {
-			err_input = errors.New("not found required parameter t")
-			break
-		}
+			if not_found {
+				err_input = errors.New("not found required parameter call_id")
+				break
+			}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
 
-		t, err := time.Parse(time.RFC3339Nano, t_str)
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+			call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
+			if err != nil {
+				err_input = err
+				break
+			}
 
-		err_processing_not_internal, err_processing_internal =
-			self.controller.SocketSetDeadline(
-				connected_socket_id_uuid,
-				t,
-			)
-
-		result = err_processing_not_internal == nil &&
-			err_processing_internal == nil
-
-	case "SocketSetReadDeadline":
-		connected_socket_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
+			first, not_found, err := anyutils.TraverseObjectTree002_int(
 				msg_par,
 				true,
 				true,
-				"connected_socket_id",
+				"first",
 			)
 
-		if not_found {
-			err_input = errors.New("not found required parameter connected_socket_id")
-			break
-		}
+			if not_found {
+				err_input = errors.New("not found required parameter 'first'")
+				break
+			}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
 
-		connected_socket_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(connected_socket_id)
-		if err != nil {
-			err_input = err
-		}
+			if first < 0 {
+				err_input = errors.New("first must be >= 0")
+				break
+			}
 
-		t_str, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
+			last, not_found, err := anyutils.TraverseObjectTree002_int(
 				msg_par,
 				true,
 				true,
-				"t",
+				"first",
 			)
 
-		if not_found {
-			err_input = errors.New("not found required parameter t")
-			break
-		}
+			if not_found {
+				err_input = errors.New("not found required parameter 'last'")
+				break
+			}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
 
-		t, err := time.Parse(time.RFC3339Nano, t_str)
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+			if last < first {
+				err_input = errors.New("last must be >= first")
+				break
+			}
 
-		err_processing_not_internal, err_processing_internal =
-			self.controller.SocketSetReadDeadline(
-				connected_socket_id_uuid,
-				t,
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.CallGetArgValues(
+					call_id_uuid,
+					first, last,
+				)
+
+		case "CallClose":
+			call_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"call_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter call_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			call_id_uuid, err := gouuidtools.NewUUIDFromString(call_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			self.controller.CallClose(
+				call_id_uuid,
 			)
 
-		result = err_processing_not_internal == nil &&
-			err_processing_internal == nil
+		case "BufferGetInfo":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
 
-	case "SocketSetWriteDeadline":
-		connected_socket_id, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetInfo(
+					buffer_id_uuid,
+				)
+
+		case "BufferGetItemsCount":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetItemsCount(
+					buffer_id_uuid,
+				)
+
+		case "BufferGetItemsIds":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			// 1st spec
+
+			first_spec_str, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"first_spec",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter first_spec")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			first_spec, ty := NewARPCBufferItemSpecifierFromString(first_spec_str)
+			if ty == ARPCBufferItemSpecifierTypeInvalid {
+				err_input = errors.New("invalid value for first_spec")
+				break
+			}
+
+			// 2nd spec
+
+			last_spec_str, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"last_spec",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter last_spec")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			last_spec, ty := NewARPCBufferItemSpecifierFromString(last_spec_str)
+			if ty == ARPCBufferItemSpecifierTypeInvalid {
+				err_input = errors.New("invalid value for last_spec")
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetItemsIds(
+					buffer_id_uuid,
+					first_spec,
+					last_spec,
+				)
+
+		case "BufferGetItemsTimesByIds":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			ids, not_found, err :=
+				anyutils.TraverseObjectTree002_str_list(
+					msg_par,
+					true,
+					true,
+					"ids",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter ids")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetItemsTimesByIds(
+					buffer_id_uuid,
+					ids,
+				)
+
+		case "BufferGetItemsByIds":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			ids, not_found, err :=
+				anyutils.TraverseObjectTree002_str_list(
+					msg_par,
+					true,
+					true,
+					"ids",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter ids")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetItemsByIds(
+					buffer_id_uuid,
+					ids,
+				)
+
+		case "BufferGetItemsFirstTime":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetItemsFirstTime(
+					buffer_id_uuid,
+				)
+
+		case "BufferGetItemsLastTime":
+
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetItemsLastTime(
+					buffer_id_uuid,
+				)
+
+		case "BufferSubscribeOnUpdatesNotification":
+
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			err_processing_not_internal, err_processing_internal =
+				self.controller.BufferSubscribeOnUpdatesNotification(
+					buffer_id_uuid,
+				)
+
+			result = err_processing_not_internal == nil &&
+				err_processing_internal == nil
+
+		case "BufferUnsubscribeFromUpdatesNotification":
+
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			err_processing_not_internal, err_processing_internal =
+				self.controller.BufferUnsubscribeFromUpdatesNotification(
+					buffer_id_uuid,
+				)
+
+			result = err_processing_not_internal == nil &&
+				err_processing_internal == nil
+
+		case "BufferGetIsSubscribedOnUpdatesNotification":
+
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetIsSubscribedOnUpdatesNotification(
+					buffer_id_uuid,
+				)
+
+		case "BufferGetListSubscribedUpdatesNotifications":
+
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferGetIsSubscribedOnUpdatesNotification(
+					buffer_id_uuid,
+				)
+
+		case "BufferBinaryGetSize":
+
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferBinaryGetSize(
+					buffer_id_uuid,
+				)
+
+		case "BufferBinaryGetSlice":
+			buffer_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"buffer_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter buffer_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			buffer_id_uuid, err := gouuidtools.NewUUIDFromString(buffer_id)
+			if err != nil {
+				err_input = err
+			}
+
+			// 1st spec
+
+			start_index, not_found, err :=
+				anyutils.TraverseObjectTree002_int(
+					msg_par,
+					true,
+					true,
+					"start_index",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter first_spec")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			// 2nd spec
+
+			end_index, not_found, err :=
+				anyutils.TraverseObjectTree002_int(
+					msg_par,
+					true,
+					true,
+					"end_index",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter last_spec")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.BufferBinaryGetSlice(
+					buffer_id_uuid,
+					start_index,
+					end_index,
+				)
+
+		case "TransmissionGetList":
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.TransmissionGetList()
+
+		case "TransmissionGetInfo":
+			transmission_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"transmission_id",
+				)
+
+			if not_found {
+				err_input =
+					errors.New("not found required parameter transmission_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			transmission_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(transmission_id)
+			if err != nil {
+				err_input = err
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.TransmissionGetInfo(
+					transmission_id_uuid,
+				)
+
+		case "SocketGetList":
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.SocketGetList()
+
+		case "SocketOpen":
+			listening_socket_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"listening_socket_id",
+				)
+
+			if not_found {
+				err_input =
+					errors.New("not found required parameter listening_socket_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			listening_socket_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(listening_socket_id)
+			if err != nil {
+				err_input = err
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.SocketOpen(
+					listening_socket_id_uuid,
+				)
+
+		case "SocketRead":
+			connected_socket_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"connected_socket_id",
+				)
+
+			if not_found {
+				err_input =
+					errors.New("not found required parameter connected_socket_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			connected_socket_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(connected_socket_id)
+			if err != nil {
+				err_input = err
+			}
+
+			try_read_size, not_found, err := anyutils.TraverseObjectTree002_int(
 				msg_par,
 				true,
 				true,
-				"connected_socket_id",
+				"try_read_size",
 			)
 
-		if not_found {
-			err_input = errors.New("not found required parameter connected_socket_id")
-			break
-		}
+			if not_found {
+				err_input =
+					errors.New("not found required parameter try_read_size")
+				break
+			}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
 
-		connected_socket_id_uuid, err :=
-			gouuidtools.NewUUIDFromString(connected_socket_id)
-		if err != nil {
-			err_input = err
-		}
+			if try_read_size < 0 {
+				err_input = errors.New("try_read_size must be >= 0")
+				break
+			}
 
-		t_str, not_found, err :=
-			anyutils.TraverseObjectTree002_string(
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.SocketRead(
+					connected_socket_id_uuid,
+					try_read_size,
+				)
+
+		case "SocketWrite":
+
+			connected_socket_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"connected_socket_id",
+				)
+
+			if not_found {
+				err_input =
+					errors.New("not found required parameter connected_socket_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			connected_socket_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(connected_socket_id)
+			if err != nil {
+				err_input = err
+			}
+
+			b, not_found, err := anyutils.TraverseObjectTree002_byte_list(
 				msg_par,
 				true,
 				true,
-				"t",
+				"b",
 			)
 
-		if not_found {
-			err_input = errors.New("not found required parameter t")
-			break
+			if not_found {
+				err_input = errors.New("not found required parameter b")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			result, err_processing_not_internal, err_processing_internal =
+				self.controller.SocketWrite(
+					connected_socket_id_uuid,
+					b,
+				)
+
+		case "SocketClose":
+			connected_socket_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"connected_socket_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter connected_socket_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			connected_socket_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(connected_socket_id)
+			if err != nil {
+				err_input = err
+			}
+
+			err_processing_not_internal, err_processing_internal =
+				self.controller.SocketClose(
+					connected_socket_id_uuid,
+				)
+
+			result = err_processing_not_internal == nil &&
+				err_processing_internal == nil
+
+		case "SocketSetDeadline":
+			connected_socket_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"connected_socket_id",
+				)
+
+			if not_found {
+				err_input =
+					errors.New(
+						"not found required parameter connected_socket_id",
+					)
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			connected_socket_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(connected_socket_id)
+			if err != nil {
+				err_input = err
+			}
+
+			t_str, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"t",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter t")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			t, err := time.Parse(time.RFC3339Nano, t_str)
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			err_processing_not_internal, err_processing_internal =
+				self.controller.SocketSetDeadline(
+					connected_socket_id_uuid,
+					t,
+				)
+
+			result = err_processing_not_internal == nil &&
+				err_processing_internal == nil
+
+		case "SocketSetReadDeadline":
+			connected_socket_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"connected_socket_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter connected_socket_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			connected_socket_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(connected_socket_id)
+			if err != nil {
+				err_input = err
+			}
+
+			t_str, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"t",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter t")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			t, err := time.Parse(time.RFC3339Nano, t_str)
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			err_processing_not_internal, err_processing_internal =
+				self.controller.SocketSetReadDeadline(
+					connected_socket_id_uuid,
+					t,
+				)
+
+			result = err_processing_not_internal == nil &&
+				err_processing_internal == nil
+
+		case "SocketSetWriteDeadline":
+			connected_socket_id, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"connected_socket_id",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter connected_socket_id")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			connected_socket_id_uuid, err :=
+				gouuidtools.NewUUIDFromString(connected_socket_id)
+			if err != nil {
+				err_input = err
+			}
+
+			t_str, not_found, err :=
+				anyutils.TraverseObjectTree002_string(
+					msg_par,
+					true,
+					true,
+					"t",
+				)
+
+			if not_found {
+				err_input = errors.New("not found required parameter t")
+				break
+			}
+
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			t, err := time.Parse(time.RFC3339Nano, t_str)
+			if err != nil {
+				err_processing_internal = err
+				break
+			}
+
+			err_processing_not_internal, err_processing_internal =
+				self.controller.SocketSetWriteDeadline(
+					connected_socket_id_uuid,
+					t,
+				)
+
+			result = err_processing_not_internal == nil &&
+				err_processing_internal == nil
 		}
 
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		t, err := time.Parse(time.RFC3339Nano, t_str)
-		if err != nil {
-			err_processing_internal = err
-			break
-		}
-
-		err_processing_not_internal, err_processing_internal =
-			self.controller.SocketSetWriteDeadline(
-				connected_socket_id_uuid,
-				t,
+		if msg_has_id {
+			err_processing_internal = self.methodReplyAction(
+				msg_id,
+				result,
+				err_code,
+				err_input,
+				err_processing_not_internal,
+				err_processing_internal,
 			)
+			if err_processing_internal != nil {
+				return nil, err_processing_internal
+			}
+		}
 
-		result = err_processing_not_internal == nil &&
-			err_processing_internal == nil
+		return err_input, err_processing_internal
 	}
 
-	if msg_has_id {
-		err_processing_internal = self.methodReplyAction(
-			msg_id,
-			result,
-			err_code,
-			err_input,
-			err_processing_not_internal,
-			err_processing_internal,
-		)
-		if err_processing_internal != nil {
-			return nil, err_processing_internal
-		}
-	}
-
-	return err_input, err_processing_internal
+	return errors.New("invalid message format"), errors.New("input error")
 }
 
 // note: err_code used only if err_reply and/or err != nil.

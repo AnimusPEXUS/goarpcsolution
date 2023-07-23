@@ -3,6 +3,7 @@ package goarpcsolution
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -122,6 +123,7 @@ func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 	}
 
 	self.wrkr01 = goworker.New(self.worker01)
+	self.wrkr01.Start()
 	return self
 }
 
@@ -173,23 +175,23 @@ func (self *ARPCNodeCtlBasic) worker01(
 	set_starting()
 	defer func() {
 		for _, i := range self.calls[:] {
-			self.deleteCallR_lrc(i)
+			self.deleteCallR(i)
 		}
 
 		for _, i := range self.buffers[:] {
-			self.deleteBufferR_lrc(i)
+			self.deleteBufferR(i)
 		}
 
 		for _, i := range self.transmissions[:] {
-			self.deleteTransmissionR_lrc(i)
+			self.deleteTransmissionR(i)
 		}
 
 		for _, i := range self.listening_sockets[:] {
-			self.deleteListeningSocketR_lrc(i)
+			self.deleteListeningSocketR(i)
 		}
 
 		for _, i := range self.connected_sockets[:] {
-			self.deleteConnectedSocketR_lrc(i)
+			self.deleteConnectedSocketR(i)
 		}
 
 		set_stopped()
@@ -198,6 +200,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 	var timeout_cleanup = worker01_interval_cleanup
 
 	for true {
+		log.Println("ARPC worker iteration")
 		if self.stop_flag {
 			break
 		}
@@ -207,7 +210,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.calls[:] {
 				if x.TTL <= 0 {
-					self.deleteCallR_lrc(x)
+					self.deleteCallR(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -215,7 +218,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.buffers[:] {
 				if x.TTL <= 0 {
-					self.deleteBufferR_lrc(x)
+					self.deleteBufferR(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -223,7 +226,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.transmissions[:] {
 				if x.TTL <= 0 {
-					self.deleteTransmissionR_lrc(x)
+					self.deleteTransmissionR(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -231,7 +234,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.listening_sockets[:] {
 				if x.TTL <= 0 {
-					self.deleteListeningSocketR_lrc(x)
+					self.deleteListeningSocketR(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -239,7 +242,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 
 			for _, x := range self.connected_sockets[:] {
 				if x.TTL <= 0 {
-					self.deleteConnectedSocketR_lrc(x)
+					self.deleteConnectedSocketR(x)
 				} else {
 					x.TTL -= worker01_interval_cleanup
 				}
@@ -253,7 +256,7 @@ func (self *ARPCNodeCtlBasic) worker01(
 	}
 }
 
-func (self *ARPCNodeCtlBasic) deleteCallR_lrc(
+func (self *ARPCNodeCtlBasic) deleteCallR(
 	obj *ARPCNodeCtlBasicCallR,
 ) {
 	self.calls_mtx.Lock()
@@ -266,7 +269,7 @@ func (self *ARPCNodeCtlBasic) deleteCallR_lrc(
 	}
 }
 
-func (self *ARPCNodeCtlBasic) deleteBufferR_lrc(
+func (self *ARPCNodeCtlBasic) deleteBufferR(
 	obj *ARPCNodeCtlBasicBufferR,
 ) {
 	self.buffers_mtx.Lock()
@@ -282,7 +285,7 @@ func (self *ARPCNodeCtlBasic) deleteBufferR_lrc(
 	}
 }
 
-func (self *ARPCNodeCtlBasic) deleteTransmissionR_lrc(
+func (self *ARPCNodeCtlBasic) deleteTransmissionR(
 	obj *ARPCNodeCtlBasicTransmissionR,
 ) {
 	self.transmissions_mtx.Lock()
@@ -298,7 +301,7 @@ func (self *ARPCNodeCtlBasic) deleteTransmissionR_lrc(
 	}
 }
 
-func (self *ARPCNodeCtlBasic) deleteListeningSocketR_lrc(
+func (self *ARPCNodeCtlBasic) deleteListeningSocketR(
 	obj *ARPCNodeCtlBasicListeningSocketR,
 ) {
 	self.listening_sockets_mtx.Lock()
@@ -314,7 +317,7 @@ func (self *ARPCNodeCtlBasic) deleteListeningSocketR_lrc(
 	}
 }
 
-func (self *ARPCNodeCtlBasic) deleteConnectedSocketR_lrc(
+func (self *ARPCNodeCtlBasic) deleteConnectedSocketR(
 	obj *ARPCNodeCtlBasicConnectedSocketR,
 
 ) {
