@@ -239,7 +239,7 @@ func (self *ARPCNode) handleJRPCNodeMessage(
 	msg *gojsonrpc2.Message,
 ) (error, error) {
 
-	if debug {
+	if self.debug {
 		self.DebugPrintln("PushMessageFromOutside()")
 	}
 
