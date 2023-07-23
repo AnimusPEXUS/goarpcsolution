@@ -592,6 +592,7 @@ func (self *ARPCNodeCtlBasic) NewCall(
 	call_id *gouuidtools.UUID,
 	response_on *gouuidtools.UUID,
 ) {
+	log.Println("controller got NewCall()")
 }
 
 func (self *ARPCNodeCtlBasic) NewBuffer(
