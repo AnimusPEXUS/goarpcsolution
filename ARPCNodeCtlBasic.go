@@ -62,6 +62,8 @@ type ARPCNodeCtlBasic struct {
 
 	node *ARPCNode
 
+	debug bool
+
 	debugName string
 
 	closeRecursionGuard *gorecursionguard.RecursionGuard
@@ -70,6 +72,7 @@ type ARPCNodeCtlBasic struct {
 func NewARPCNodeCtlBasic() *ARPCNodeCtlBasic {
 	self := new(ARPCNodeCtlBasic)
 	self.debugName = "ARPCNodeCtlBasic"
+	self.debug = true
 
 	self.closeRecursionGuard = gorecursionguard.NewRecursionGuard(
 		gorecursionguard.RGM_SilentReturn,

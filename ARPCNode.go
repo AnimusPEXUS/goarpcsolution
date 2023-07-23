@@ -34,6 +34,8 @@ type ARPCNode struct {
 
 	debugName string
 
+	debug bool
+
 	stop_flag bool
 
 	closeRecursionGuard *gorecursionguard.RecursionGuard
@@ -48,6 +50,8 @@ func NewARPCNode(
 		gorecursionguard.RGM_SilentReturn,
 		nil,
 	)
+
+	self.debug = true
 
 	self.debugName = "ARPCNode"
 	self.controller = controller
