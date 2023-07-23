@@ -46,6 +46,12 @@ func NewARPCNode(
 	self.controller.SetNode(self)
 
 	self.jrpc_node = gojsonrpc2.NewJSONRPC2Node()
+	self.jrpc_node.PushMessageToOutsideCB = func(data []byte) error {
+		if self.PushMessageToOutsideCB == nil {
+			return errors.New("ARPCNode.PushMessageToOutsideCB == nil")
+		}
+		return self.PushMessageToOutsideCB(data)
+	}
 
 	self.jrpc_node.OnRequestCB =
 		func(msg *gojsonrpc2.Message) (error, error) {
