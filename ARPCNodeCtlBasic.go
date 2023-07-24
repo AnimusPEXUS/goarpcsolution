@@ -361,7 +361,6 @@ func (self *ARPCNodeCtlBasic) Call(
 		args,
 		false,
 		response_handler,
-		TTL_CONST_10MIN,
 	)
 
 	if err != nil {
@@ -398,7 +397,6 @@ func (self *ARPCNodeCtlBasic) Reply(
 		args,
 		true,
 		nil,
-		0,
 	)
 
 	if err != nil {
@@ -431,7 +429,8 @@ func (self *ARPCNodeCtlBasic) saveCall(
 	// note: here TTL is more appropriate name, because call object removed
 	// by timeout, not immediatly after response.
 	// also response have TTL, so it can be rechecked
-	TTL time.Duration,
+	// note: maybe this parameter isn't needed at all
+	// TTL time.Duration,
 ) error {
 
 	if (name != "" && reply_to_id != nil) ||
@@ -550,7 +549,7 @@ func (self *ARPCNodeCtlBasic) saveCall(
 		Args:      args,
 
 		ResponseHandler: response_handler,
-		ResponseTimeout: response_timeout,
+		TTL:             TTL_CONST_10MIN,
 	}
 
 	self.calls_mtx.Lock()
