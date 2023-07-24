@@ -1628,7 +1628,7 @@ func (self *ARPCNode) NewCall(
 ) error {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "NewCall"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "NewCall"
 
 	params := map[string]any{"call_id": call_id}
 
@@ -1645,7 +1645,7 @@ func (self *ARPCNode) NewCall(
 // 	buffer_id *gouuidtools.UUID,
 // ) error {
 // 	msg := new(gojsonrpc2.Message)
-// 	msg.Method = "NewBuffer"
+// 	msg.Method =ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "NewBuffer"
 
 // 	msg.Params = map[string]any{"buffer_id": buffer_id.Format()}
 
@@ -1657,7 +1657,7 @@ func (self *ARPCNode) BufferUpdated(
 ) error {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferUpdated"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferUpdated"
 
 	msg.Params = map[string]any{"buffer_id": buffer_id.Format()}
 
@@ -1669,7 +1669,7 @@ func (self *ARPCNode) NewTransmission(
 ) error {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "NewTransmission"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "NewTransmission"
 
 	msg.Params = map[string]any{
 		"tarnsmission_id": tarnsmission_id.Format(),
@@ -1682,7 +1682,7 @@ func (self *ARPCNode) NewTransmission(
 // 	listening_socket_id *gouuidtools.UUID,
 // ) error {
 // 	msg := new(gojsonrpc2.Message)
-// 	msg.Method = "NewSocket"
+// 	msg.Method =ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "NewSocket"
 
 // 	msg.Params = map[string]any{
 // 		"listening_socket_id": listening_socket_id.Format(),
@@ -1738,7 +1738,7 @@ func (self *ARPCNode) CallGetList(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallGetList"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "CallGetList"
 
 	timedout_sig, closed_sig, msg_sig, rh :=
 		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
@@ -1790,7 +1790,7 @@ func (self *ARPCNode) CallGetInfo(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallGetInfo"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "CallGetInfo"
 	msg.Params = map[string]any{"call_id": call_id.Format()}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -1836,7 +1836,7 @@ func (self *ARPCNode) CallGetArgCount(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallGetArgCount"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "CallGetArgCount"
 	msg.Params = map[string]any{"call_id": call_id.Format()}
 
 	timedout_sig, closed_sig, msg_sig, rh :=
@@ -1884,7 +1884,7 @@ func (self *ARPCNode) CallGetArgValues(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallGetArgValue"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "CallGetArgValue"
 	msg.Params = map[string]any{
 		"call_id": call_id.Format(),
 		"first":   first,
@@ -1935,7 +1935,7 @@ func (self *ARPCNode) CallClose(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "CallClose"
 	msg.Params = map[string]any{
 		"call_id": call_id.Format(),
 	}
@@ -1981,7 +1981,7 @@ func (self *ARPCNode) BufferGetInfo(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetInfo"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetInfo"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2031,7 +2031,7 @@ func (self *ARPCNode) BufferGetItemsCount(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetItemsCount"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetItemsCount"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2083,7 +2083,7 @@ func (self *ARPCNode) BufferGetItemsIds(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetItemsIds"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetItemsIds"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2133,7 +2133,7 @@ func (self *ARPCNode) BufferGetItemsByIds(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetItemsByIds"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetItemsByIds"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 		"ids":       ids,
@@ -2194,7 +2194,7 @@ func (self *ARPCNode) BufferGetItemsFirstTime(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetItemsFirstTime"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetItemsFirstTime"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2249,7 +2249,7 @@ func (self *ARPCNode) BufferGetItemsLastTime(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetItemsIds"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetItemsIds"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2302,7 +2302,7 @@ func (self *ARPCNode) BufferSubscribeOnUpdatesNotification(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferSubscribeOnUpdatesNotification"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferSubscribeOnUpdatesNotification"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2343,7 +2343,7 @@ func (self *ARPCNode) BufferUnsubscribeFromUpdatesNotification(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferUnsubscribeFromUpdatesNotification"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferUnsubscribeFromUpdatesNotification"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2385,7 +2385,7 @@ func (self *ARPCNode) BufferGetIsSubscribedOnUpdatesNotification(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetIsSubscribedOnUpdatesNotification"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetIsSubscribedOnUpdatesNotification"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2432,7 +2432,7 @@ func (self *ARPCNode) BufferGetListSubscribedUpdatesNotifications(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferGetListSubscribedUpdatesNotifications"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferGetListSubscribedUpdatesNotifications"
 
 	timedout_sig, closed_sig, msg_sig, rh :=
 		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
@@ -2483,7 +2483,7 @@ func (self *ARPCNode) BufferBinaryGetSize(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferBinaryGetSize"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferBinaryGetSize"
 	msg.Params = map[string]any{
 		"buffer_id": buffer_id.Format(),
 	}
@@ -2532,7 +2532,7 @@ func (self *ARPCNode) BufferBinaryGetSlice(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "BufferBinaryGetSlice"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "BufferBinaryGetSlice"
 	msg.Params = map[string]any{
 		"buffer_id":   buffer_id.Format(),
 		"start_index": start_index,
@@ -2580,7 +2580,7 @@ func (self *ARPCNode) TransmissionGetList(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "TransmissionGetList"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "TransmissionGetList"
 
 	timedout_sig, closed_sig, msg_sig, rh :=
 		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
@@ -2631,7 +2631,7 @@ func (self *ARPCNode) TransmissionGetInfo(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "TransmissionGetInfo"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "TransmissionGetInfo"
 	msg.Params = map[string]any{
 		"transmission_id": transmission_id.Format(),
 	}
@@ -2684,7 +2684,7 @@ func (self *ARPCNode) SocketGetList(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "SocketGetList"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "SocketGetList"
 
 	timedout_sig, closed_sig, msg_sig, rh :=
 		gojsonrpc2.NewChannelledJSONRPC2NodeRespHandler()
@@ -2735,7 +2735,7 @@ func (self *ARPCNode) SocketOpen(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "SocketOpen"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "SocketOpen"
 	msg.Params = map[string]any{
 		"listening_socket_id": listening_socket_id.Format(),
 	}
@@ -2790,7 +2790,7 @@ func (self *ARPCNode) SocketRead(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "SocketRead"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "SocketRead"
 	msg.Params = map[string]any{
 		"connected_socket_id": connected_socket_id.Format(),
 		"try_read_size":       try_read_size,
@@ -2841,7 +2841,7 @@ func (self *ARPCNode) SocketWrite(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "SocketWrite"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "SocketWrite"
 	msg.Params = map[string]any{
 		"connected_socket_id": connected_socket_id.Format(),
 		"b":                   b,
@@ -2890,7 +2890,7 @@ func (self *ARPCNode) SocketClose(
 ) {
 	self.nodeInvalidStateException()
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "CallClose"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "CallClose"
 	msg.Params = map[string]any{
 		"connected_socket_id": connected_socket_id.Format(),
 	}
@@ -2931,7 +2931,7 @@ func (self *ARPCNode) SocketSetDeadline(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "SocketSetDeadline"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "SocketSetDeadline"
 	msg.Params = map[string]any{
 		"connected_socket_id": connected_socket_id.Format(),
 		"t":                   t.Format(time.RFC3339Nano),
@@ -2973,7 +2973,7 @@ func (self *ARPCNode) SocketSetReadDeadline(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "SocketSetReadDeadline"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "SocketSetReadDeadline"
 	msg.Params = map[string]any{
 		"connected_socket_id": connected_socket_id.Format(),
 		"t":                   t.Format(time.RFC3339Nano),
@@ -3015,7 +3015,7 @@ func (self *ARPCNode) SocketSetWriteDeadline(
 	err error,
 ) {
 	msg := new(gojsonrpc2.Message)
-	msg.Method = "SocketSetWriteDeadline"
+	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "SocketSetWriteDeadline"
 	msg.Params = map[string]any{
 		"connected_socket_id": connected_socket_id.Format(),
 		"t":                   t.Format(time.RFC3339Nano),
