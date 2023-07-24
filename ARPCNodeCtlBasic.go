@@ -134,6 +134,10 @@ func (self *ARPCNodeCtlBasic) SetNode(node *ARPCNode) {
 	self.node = node
 }
 
+func (self *ARPCNodeCtlBasic) SetDebug(val bool) {
+	self.debug = val
+}
+
 func (self *ARPCNodeCtlBasic) SetDebugName(name string) {
 	self.debugName = fmt.Sprintf("[%s]", name)
 }
