@@ -227,6 +227,9 @@ func (self *ARPCNode) PushMessageFromOutside(data []byte) (error, error) {
 func (self *ARPCNode) handleMessage_simple(
 	msg *gojsonrpc2.Message,
 ) (error, error) {
+	if self.debug {
+		self.DebugPrintln("handleMessage_simple msg:", msg)
+	}
 	return self.controller.SimpleRequest(msg)
 }
 
@@ -245,7 +248,7 @@ func (self *ARPCNode) handleJRPCNodeMessage(
 ) (error, error) {
 
 	if self.debug {
-		self.DebugPrintln("PushMessageFromOutside()")
+		self.DebugPrintln("handleJRPCNodeMessage msg:", msg)
 	}
 
 	if self.controller == nil {
@@ -255,11 +258,18 @@ func (self *ARPCNode) handleJRPCNodeMessage(
 	}
 
 	if strings.HasPrefix(msg.Method, ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN) {
+		if self.debug {
+			self.DebugPrintln("handleJRPCNodeMessage msg handler: simple")
+		}
 		msg.Method = msg.Method[ARPC_MSG_PREFIX_SIMPLE_PLUST_COLUMN_LEN:]
 		return self.handleMessage_simple(msg)
 	}
 
 	if strings.HasPrefix(msg.Method, ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN) {
+		if self.debug {
+			self.DebugPrintln("handleJRPCNodeMessage msg handler: arpc")
+		}
+
 		msg.Method = msg.Method[ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN_LEN:]
 
 		msg_id, msg_has_id := msg.GetId()
@@ -1563,6 +1573,19 @@ func (self *ARPCNode) methodReplyAction(
 	err_processing_internal error,
 ) error {
 	msg := new(gojsonrpc2.Message)
+
+	defer func() {
+		if self.debug {
+			self.DebugPrintln("methodReplyAction msg_id:", msg_id)
+			self.DebugPrintln("methodReplyAction result:", result)
+			self.DebugPrintln("methodReplyAction err_code:", err_code)
+			self.DebugPrintln("methodReplyAction err_input:", err_input)
+			self.DebugPrintln("methodReplyAction err_processing_not_internal:", err_processing_not_internal)
+			self.DebugPrintln("methodReplyAction err_processing_internal:", err_processing_internal)
+			self.DebugPrintln("methodReplyAction msg:", msg)
+		}
+	}()
+
 	msg.SetId(msg_id)
 
 	// err_code = 10 // todo: find better value
