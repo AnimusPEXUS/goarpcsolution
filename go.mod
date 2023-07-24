@@ -3,7 +3,7 @@ module github.com/AnimusPEXUS/goarpcsolution
 go 1.20
 
 require (
-	github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230723031745-08cc11514f16
+	github.com/AnimusPEXUS/gojsonrpc2 v0.0.0-20230724022721-395b4d799a57
 	github.com/AnimusPEXUS/gorecursionguard v0.0.0-20230721164047-3900188c3f12
 	github.com/AnimusPEXUS/goreentrantlock v0.0.0-20230722175424-235503e905b0
 	github.com/AnimusPEXUS/gouuidtools v0.0.0-20230722031440-125d4120438a

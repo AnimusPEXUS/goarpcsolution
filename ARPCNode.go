@@ -51,8 +51,6 @@ func NewARPCNode(
 		nil,
 	)
 
-	self.debug = true
-
 	self.debugName = "ARPCNode"
 	self.controller = controller
 	self.controller.SetNode(self)
@@ -71,6 +69,13 @@ func NewARPCNode(
 		}
 
 	return self
+}
+
+func (self *ARPCNode) SetDebug(val bool) {
+	self.debug = val
+	if self.jrpc_node != nil {
+		self.jrpc_node.SetDebug(val)
+	}
 }
 
 func (self *ARPCNode) SetDebugName(name string) {
@@ -1720,8 +1725,6 @@ func (self *ARPCNode) subResultGetter01(
 			false, false, nil, errors.New("result must be uuid string")
 
 	}
-	return nil,
-		false, false, nil, errors.New("unknown error")
 }
 
 func (self *ARPCNode) CallGetList(

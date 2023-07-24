@@ -346,8 +346,7 @@ func (self *ARPCNodeCtlBasic) Call(
 	args []*ARPCCallArg,
 
 	unhandled bool,
-	rh *ARPCNodeCtlBasicCallResHandler, // TODO: ?
-	response_timeout time.Duration, // TODO: ?
+	response_handler *ARPCNodeCtlBasicCallResHandler, // TODO: ?
 ) (ret_any *gouuidtools.UUID, ret_err error) {
 
 	call_id, err := self.call_id_r.GenUUID()
@@ -360,6 +359,8 @@ func (self *ARPCNodeCtlBasic) Call(
 		nil,
 		name,
 		args,
+		false,
+		response_handler,
 		TTL_CONST_10MIN,
 	)
 
@@ -395,7 +396,9 @@ func (self *ARPCNodeCtlBasic) Reply(
 		reply_to_id,
 		"",
 		args,
-		TTL_CONST_10MIN,
+		true,
+		nil,
+		0,
 	)
 
 	if err != nil {
@@ -421,7 +424,14 @@ func (self *ARPCNodeCtlBasic) saveCall(
 	name string,
 	args []*ARPCCallArg,
 
-	ttl time.Duration,
+	// those 3 parama are for new calls, not for replys (you can't reply on reply)
+	unhandled bool,
+	response_handler *ARPCNodeCtlBasicCallResHandler,
+
+	// note: here TTL is more appropriate name, because call object removed
+	// by timeout, not immediatly after response.
+	// also response have TTL, so it can be rechecked
+	TTL time.Duration,
 ) error {
 
 	if (name != "" && reply_to_id != nil) ||
@@ -538,7 +548,9 @@ func (self *ARPCNodeCtlBasic) saveCall(
 		ReplyToId: reply_to_id,
 		Name:      name,
 		Args:      args,
-		TTL:       TTL_CONST_10MIN,
+
+		ResponseHandler: response_handler,
+		ResponseTimeout: response_timeout,
 	}
 
 	self.calls_mtx.Lock()
@@ -876,7 +888,9 @@ type ARPCNodeCtlBasicCallR struct {
 	Name string
 	Args []*ARPCCallArg
 
-	TTL time.Duration
+	Handled         bool
+	ResponseHandler *ARPCNodeCtlBasicCallResHandler
+	TTL             time.Duration
 }
 
 func (self *ARPCNodeCtlBasicCallR) Deleted() {
