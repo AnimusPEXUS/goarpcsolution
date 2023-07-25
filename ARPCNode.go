@@ -65,6 +65,9 @@ func NewARPCNode(
 
 	self.jrpc_node.OnRequestCB =
 		func(msg *gojsonrpc2.Message) (error, error) {
+			if self.debug {
+				self.DebugPrintfln("jrpc_node.OnRequestCB msg:", msg)
+			}
 			return self.handleJRPCNodeMessage(msg)
 		}
 
