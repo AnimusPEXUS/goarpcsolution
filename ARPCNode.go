@@ -1656,7 +1656,7 @@ func (self *ARPCNode) NewCall(
 	msg := new(gojsonrpc2.Message)
 	msg.Method = ARPC_MSG_PREFIX_ARPC_PLUS_COLUMN + "NewCall"
 
-	params := map[string]any{"call_id": call_id}
+	params := map[string]any{"call_id": call_id.Format()}
 
 	if response_on != nil && !response_on.IsNil() {
 		params["response_on"] = response_on
